@@ -4,8 +4,7 @@ RIPStripe is on-chain financial infrastructure for merchants to accept [GENIUS A
 Under the hood, RIPStripe uses a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital), Coinbase's x402 `HTTP 402: Payment Required` response type, and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps from a single liquidity pool. 
 
 ## User Flow:
-<img width="1000" height="612" alt="RIPStripe_diagram1" src="https://github.com/user-attachments/assets/84e6ee0f-0c12-4a91-835a-80b7e9897b0f" />
-
+<img width="1386" height="929" alt="RIPStripe_diagram1" src="https://github.com/user-attachments/assets/7d8488b5-1a2b-4f4c-a4f2-f9a64a71c84b" />
 * :white_check_mark: Merchants get GENIUS Act Compliant, borderless, and instant payments infrastructure for 10x cheaper without needing to know/use the blockchain directly.
 * :white_check_mark: Customers pay using any stablecoin they want and from any chain they are on.
 * :white_check_mark: Stablecoin issuers get direct, on-chain distribution for their assets in the Ethereum ecosystem without fragmenting liquidity.
