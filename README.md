@@ -1,3 +1,5 @@
 # Sphere Swap: an Orbital-based AMM for thousands of stablecoins 
 
-[![Orbital Animation 2](https://raw.githubusercontent.com/leeederek/sphere-swap/main/media/orbital_gif_2.mp4)
+
+https://github.com/user-attachments/assets/a1eea855-4b8c-44f3-9e4f-c3ac67d8c2c9
+
