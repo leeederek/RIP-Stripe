@@ -4,4 +4,6 @@ Sphere Swap is a cross-chain implementation of an [Orbital-based](https://www.pa
 
 Sphere Swap also has a compliance layer on top using oracles to pull in stablecoin metadata from [GENIUS Act](https://en.wikipedia.org/wiki/GENIUS_Act) Compliant stablecoin issuers (e.g. reserve breakdown, KYC compliance, etc). 
 
+![orbitalgif1](https://raw.githubusercontent.com/leeederek/sphere-swap/main/media/orbital-gif-1.gif) 
+
 ![orbitalgif2](https://raw.githubusercontent.com/leeederek/sphere-swap/main/media/orbital-gif-2.gif)
