@@ -5,3 +5,5 @@ __pycache__/
 *.pyd
 # Ignore virtual environment directories
 pythonDev/
+.env
+venv/
