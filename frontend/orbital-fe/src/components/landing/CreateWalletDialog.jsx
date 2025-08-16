@@ -8,9 +8,9 @@ import Privy from '../../assets/svgs/privy';
  * Styling matches the app's dark, glassy theme by leveraging CSS variables
  * from `index.css` and reusing existing button classes.
  */
-export default function CreateWalletDialog({ isOpen, onClose, onCreate }) {
-  const [pageIndex, setPageIndex] = useState(0); // 0: choose, 1: confirm/details
-  const [selectedMethod, setSelectedMethod] = useState(null);
+export default function CreateWalletDialog({ isOpen, onClose, onCreate, initialMethod }) {
+  const [pageIndex, setPageIndex] = useState(0); // 0: choose, 1: email/otp
+  const [selectedMethod, setSelectedMethod] = useState(initialMethod || null);
   const [slidesOpacity, setSlidesOpacity] = useState(1);
 
   useEffect(() => {
@@ -22,6 +22,20 @@ export default function CreateWalletDialog({ isOpen, onClose, onCreate }) {
       document.body.style.overflow = originalOverflow;
     };
   }, [isOpen]);
+
+  // On open, if a method was pre-selected on the landing page, skip chooser
+  const showChooser = !initialMethod;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialMethod) {
+      setSelectedMethod(initialMethod);
+      setPageIndex(1);
+    } else {
+      setPageIndex(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialMethod]);
 
   if (!isOpen) return null;
 
@@ -64,16 +78,16 @@ export default function CreateWalletDialog({ isOpen, onClose, onCreate }) {
           <div>
             <div className="kicker">Create</div>
             <h3 id="create-wallet-title" style={{ margin: 0 }}>
-              {pageIndex === 0 ? 'Choose a wallet type' : 'Confirm your choice'}
+              {showChooser && pageIndex === 0 ? 'Choose a wallet type' : 'Enter your email'}
             </h3>
             <div className="muted" style={{ marginTop: 6 }}>
-              {pageIndex === 0
+              {showChooser && pageIndex === 0
                 ? 'Select how you want to create your new wallet.'
-                : selectedMethod ? `You chose ${labelFor(selectedMethod)}. Continue to set it up.` : 'Continue to set it up.'}
+                : selectedMethod ? `Using ${labelFor(selectedMethod)}. We’ll send a verification code.` : 'We’ll send a verification code.'}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            {pageIndex > 0 && (
+            {pageIndex > 0 && showChooser && (
               <button className="btn btn-ghost" onClick={handleBack}>
                 ← Back
               </button>
@@ -84,50 +98,14 @@ export default function CreateWalletDialog({ isOpen, onClose, onCreate }) {
           </div>
         </div>
 
-        <div style={styles.carouselViewport}>
-          <div
-            style={{
-              ...styles.slides,
-              transform: pageIndex === 0 ? 'translateX(0%)' : 'translateX(-50%)',
-              opacity: slidesOpacity,
-            }}
-          >
-            <div style={styles.slide}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                <OptionCard
-                  icon={<Coinbase />}
-                  title="Create with Coinbase"
-                  description="Use your email address to create a wallet."
-                  ctaLabel="Create with Coinbase"
-                  onClick={() => handleSelect('coinbase')}
-                />
-
-                <OptionCard
-                  icon={<Privy />}
-                  title="Create with Privy"
-                  description="Create a classic wallet secured with a secret recovery phrase."
-                  ctaLabel="Create with Privy"
-                  onClick={() => handleSelect('privy')}
-                />
-
-                <OptionCard
-                  title="Hardware wallet"
-                  description="Set up with Ledger or Trezor for maximum security."
-                  ctaLabel="Connect hardware wallet"
-                  onClick={() => handleSelect('hardware')}
-                />
-              </div>
-            </div>
-
-            <div style={styles.slide}>
-              <CreateWalletStep
-                method={selectedMethod}
-                onBack={handleBack}
-                onContinue={(payload) => onCreate(payload || selectedMethod || 'coinbase')}
-              />
-            </div>
-          </div>
+        <div style={{ padding: 24 }}>
+          <CreateWalletStep
+            method={selectedMethod}
+            onBack={handleBack}
+            onContinue={(payload) => onCreate(payload || selectedMethod || 'coinbase')}
+          />
         </div>
+
 
         <div className="footer-cta">
           <button className="btn" onClick={onClose}>Cancel</button>

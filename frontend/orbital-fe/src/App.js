@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import Widget from './components/Widget';
+import NewsHome from './components/newsarticle/NewsHome';
 import { CDPHooksProvider } from '@coinbase/cdp-hooks';
 import {PrivyProvider} from '@privy-io/react-auth';
 
@@ -24,7 +24,7 @@ function App() {
         }}
       >
       <CDPHooksProvider config={cdpConfig}>
-        <Widget />
+        <NewsHome />
       </CDPHooksProvider>
     </PrivyProvider>
 

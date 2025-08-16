@@ -133,7 +133,7 @@ export default function CreateWalletStep({ method, onBack, onContinue }) {
     };
 
     return (
-        <div className="card" style={{ display: 'grid', gap: 12 }}>
+        <div className="card" style={{ display: 'grid', gap: 12, marginTop: 6 }}>
             {renderContent()}
             <div className="row" style={{ marginTop: 6 }}>
                 <button className="btn" onClick={onBack} disabled={loading}>Back</button>
