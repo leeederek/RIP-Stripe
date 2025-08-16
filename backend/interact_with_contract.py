@@ -13,7 +13,8 @@ if not web3.is_connected():
 # Contract details
 ## Contract Code is in onchain/src/OrbitalPool.sol
 ## Contract Abi is in onchain/abi/OrbitalPool.json
-orbital_pool_address = "0x274725cdEEC749D4E97DC990de45a5Bba76F80C3"  # Replace with your contract address
+## Flow Address: 0x274725cdEEC749D4E97DC990de45a5Bba76F80C3
+orbital_pool_address = "0x274725cdEEC749D4E97DC990de45a5Bba76F80C3"  
 orbital_pool_abi = [
     {
         "inputs": [
