@@ -1,4 +1,4 @@
-# Sphere Swap: an Orbital-based AMM for thousands of stablecoins 
+# Sphere Swap: an Orbital-based, GENIUS Act Compliant AMM for future with thousands of stablecoins 
 
 Sphere Swap is a cross-chain implementation of an [Orbital-based](https://www.paradigm.xyz/2025/06/orbital) Automated Market Maker (AMM) that applies the concept of UniswapV3's concentrated liquidity to a type of liquidity pool that can support hundreds of stablecoins. Instead of drawing tick boundaries along a curve (e.g. y = x * k), Sphere Swap draws tick boundaries as "orbits" or "spheres" around the $1.00 price point. 
 
