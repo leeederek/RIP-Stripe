@@ -11,16 +11,19 @@ client = MongoClient("mongodb://localhost:27017/")
 db = client["orbital_db"]
 collection = db["data"]
 
+
 @router.get("/")
 async def root():
     return {"Hello": "World"}
 
+
 @router.get("/price/{stablecoin}")
 async def get_price(stablecoin: str):
     stablecoin = stablecoin.upper()
-    price = oracle.get_stablecoin_price(stablecoin)
+    price, date = oracle.get_stablecoin_price(stablecoin)
     print(price)
-    return {"stablecoin": stablecoin, "price": price}
+    return {"Stablecoin": stablecoin, "Price": f"${price}", "fetched at": date}
+
 
 @router.post("/data")
 async def post_data(data: models.BasicModel):
