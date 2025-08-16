@@ -13,7 +13,7 @@ export default function NewsHome() {
             title: 'Crypto markets steady as L2 activity grows',
             excerpt: 'Layer-2 ecosystems continue to expand with rising developer activity and new on-chain applications.',
             tag: 'Featured',
-            priceTag: '$1',
+            priceTag: '1 PYUSD',
             date: 'Today',
             clickable: true,
         },
@@ -100,9 +100,6 @@ export default function NewsHome() {
 }
 
 const styles = {
-    page: {
-        minHeight: '100vh',
-    },
     container: {
         maxWidth: 980,
         margin: '0 auto',
