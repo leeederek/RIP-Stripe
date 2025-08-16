@@ -1,4 +1,4 @@
-# RIPStripe: A cheaper and trustless Stripe alternative for the future of cross-chain stablecoin payments
+# RIPStripe: A cheaper and trustless Stripe alternative for stablecoin payments
 RIPStripe is on-chain financial infrastructure for merchants to accept [GENIUS Act](https://www.congress.gov/bill/119th-congress/senate-bill/394/text) Compliant stablecoin payments: instantly and globally for 10x less compared to Stripe (0.15% vs. [Stripe's 1.5% fee for stablecoin payments](https://stripe.com/pricing#payments)). RIPStripe supports PYUSD, USDC, USDT, and USDe.
 
 Under the hood, RIPStripe uses a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital), Coinbase's x402 `HTTP 402: Payment Required` response type, and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps from a single liquidity pool. 
