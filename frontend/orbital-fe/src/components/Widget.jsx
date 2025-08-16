@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import Coinbase from '../assets/svgs/coinbase';
 import Privy from '../assets/svgs/privy';
 import CreateWalletStep from './landing/CreateWalletStep';
+import WalletStatus from './landing/WalletStatus';
 // Removed Swap and Liquidity views for checkout-focused widget
-import { useIsSignedIn, useSignOut } from '@coinbase/cdp-hooks';
+import { useIsSignedIn, useSignOut, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 
 export default function Widget() {
   const { isSignedIn } = useIsSignedIn();
   const { signOut } = useSignOut();
+  const { currentUser } = useCurrentUser();
+  const { evmAddress } = useEvmAddress();
 
   // placeholder for future connect flow
 
@@ -26,19 +29,18 @@ export default function Widget() {
 
 
   return (
-    <div className="widget">
+    <div className="widget" style={{ maxHeight: 700, overflowY: 'auto' }}>
       <div className="widget-header">
         <div className="brand"><span className="brand-dot" /> Orbital Pay</div>
       </div>
       <div className="widget-body">
-        <div className="stack" style={{ gap: 8, marginBottom: 12 }}>
+        <div className="stack" style={{ gap: 6, marginBottom: 10 }}>
           <div className="kicker">Checkout</div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>Unlock this article</div>
           <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="helper">Full access immediately after payment</div>
-            <span className="tag warning" aria-label="Price tag">$1.00</span>
           </div>
-          <div className="card" style={{ padding: 12 }}>
+          <div className="card" style={{ padding: 14 }}>
             <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <div className="stack" style={{ gap: 4 }}>
                 <div className="label">Item</div>
@@ -46,39 +48,43 @@ export default function Widget() {
               </div>
               <div className="stack" style={{ textAlign: 'right' }}>
                 <div className="label">Total</div>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>$1.00</div>
+                <div style={{ fontWeight: 700, fontSize: 18 }}>1 PYUSD</div>
               </div>
             </div>
           </div>
         </div>
-        {/* Inline carousel */}
-        <div style={{ overflow: 'hidden', width: '100%', marginTop: 6 }}>
-          <div
-            style={{
-              display: 'flex',
-              width: '200%',
-              transition: 'transform 280ms ease, opacity 280ms ease',
-              transform: pageIndex === 0 ? 'translateX(0%)' : 'translateX(-50%)',
-              opacity: slidesOpacity,
-            }}
-          >
-            <div style={{ width: '50%', boxSizing: 'border-box', paddingRight: 0 }}>
-              <PaymentMethodStep
-                method={method}
-                setMethod={setMethod}
-                onConnect={() => goTo(1)}
-                onCreate={() => goTo(1)}
-              />
-            </div>
-            <div style={{ width: '50%', boxSizing: 'border-box', paddingLeft: 0 }}>
-              <CreateWalletStep
-                method={method}
-                onBack={() => goTo(0)}
-                onContinue={() => goTo(0)}
-              />
+        {/* Inline carousel or wallet status when signed in */}
+        {isSignedIn ? (
+          <WalletStatus onSignOut={signOut} evmAddress={currentUser?.evmAccounts || evmAddress} />
+        ) : (
+          <div style={{ overflow: 'hidden', width: '100%', marginTop: 4 }}>
+            <div
+              style={{
+                display: 'flex',
+                width: '200%',
+                transition: 'transform 280ms ease, opacity 280ms ease',
+                transform: pageIndex === 0 ? 'translateX(0%)' : 'translateX(-50%)',
+                opacity: slidesOpacity,
+              }}
+            >
+              <div style={{ width: '50%', boxSizing: 'border-box', paddingRight: 0 }}>
+                <PaymentMethodStep
+                  method={method}
+                  setMethod={setMethod}
+                  onConnect={() => goTo(1)}
+                  onCreate={() => goTo(1)}
+                />
+              </div>
+              <div style={{ width: '50%', boxSizing: 'border-box', paddingLeft: 0 }}>
+                <CreateWalletStep
+                  method={method}
+                  onBack={() => goTo(0)}
+                  onContinue={() => goTo(0)}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
       <div className="footer-cta" style={{ justifyContent: isSignedIn ? 'space-between' : 'flex-end' }}>
         {isSignedIn ? (
@@ -97,7 +103,7 @@ function PaymentMethodStep({ method, setMethod, onConnect, onCreate }) {
       <div className="stack">
         <div className="kicker">Payment method</div>
         <h2 style={{ margin: 0 }}>Choose how you'd like to pay</h2>
-        <p className="muted" style={{ marginTop: 6 }}>Select an option below, then sign in or create a wallet to pay $1 and unlock the article.</p>
+        <p className="muted" style={{ marginTop: 6 }}>Select an option below, then sign in or create a wallet to pay 1 PYUSD and unlock the article.</p>
       </div>
 
       <div className="row" style={{ gap: 12 }}>
@@ -144,17 +150,17 @@ function PaymentMethodStep({ method, setMethod, onConnect, onCreate }) {
 
       <div className="row" style={{ marginTop: 4 }}>
         <button className="btn btn-primary" style={{ flex: 1 }} onClick={onConnect}>
-          Sign in to pay $1
+          Sign in to pay 1 PYUSD
         </button>
         <button className="btn" style={{ flex: 1 }} onClick={onCreate}>
-          Create wallet to pay $1
+          Create wallet to pay 1 PYUSD
         </button>
       </div>
 
       <div className="card">
         <div className="label">Summary</div>
         <div className="stack" style={{ marginTop: 8 }}>
-          <div className="helper">• Total due: $1.00</div>
+          <div className="helper">• Total due: 1 PYUSD</div>
           <div className="helper">• Paying with: {method === 'coinbase' ? 'Coinbase (email)' : method === 'privy' ? 'Privy (email)' : 'Hardware wallet'}</div>
           <div className="helper">• Secure on-chain checkout; access unlocks immediately after payment</div>
         </div>

@@ -123,6 +123,7 @@ code {
 .row {
   display: flex;
   gap: 12px;
+  position: relative;
 }
 
 .stack {
@@ -290,6 +291,21 @@ code {
   background: rgba(34,197,94,0.1);
   border: 1px solid rgba(34,197,94,0.25);
   color: #86efac;
+}
+
+.tag-absolute {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.25);
+  color: #86efac;
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .tag.warning {
