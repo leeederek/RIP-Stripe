@@ -3,6 +3,7 @@ import Coinbase from '../assets/svgs/coinbase';
 import Privy from '../assets/svgs/privy';
 import CreateWalletStep from './landing/CreateWalletStep';
 import WalletStatus from './landing/WalletStatus';
+import Verify from './landing/Verify';
 // Removed Swap and Liquidity views for checkout-focused widget
 import { useIsSignedIn, useSignOut, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 
@@ -18,6 +19,16 @@ export default function Widget() {
   const [pageIndex, setPageIndex] = useState(0);
   const [slidesOpacity, setSlidesOpacity] = useState(1);
   const [method, setMethod] = useState('coinbase');
+  const [signedPageIndex, setSignedPageIndex] = useState(0);
+  const [signedSlidesOpacity, setSignedSlidesOpacity] = useState(1);
+  const [selectedTokenKey, setSelectedTokenKey] = useState(null);
+  const goToSigned = (idx) => {
+    setSignedSlidesOpacity(0.6);
+    requestAnimationFrame(() => {
+      setSignedPageIndex(idx);
+      requestAnimationFrame(() => setSignedSlidesOpacity(1));
+    });
+  };
 
   const goTo = (idx) => {
     setSlidesOpacity(0.6);
@@ -38,7 +49,7 @@ export default function Widget() {
           <div className="kicker">Checkout</div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>Unlock this article</div>
           <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="helper">Full access immediately after payment</div>
+            <div className="helper" style={{ marginBottom: 8 }}>Full access immediately after payment</div>
           </div>
           <div className="card" style={{ padding: 14 }}>
             <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
@@ -55,7 +66,28 @@ export default function Widget() {
         </div>
         {/* Inline carousel or wallet status when signed in */}
         {isSignedIn ? (
-          <WalletStatus onSignOut={signOut} evmAddress={currentUser?.evmAccounts || evmAddress} />
+          <div style={{ overflow: 'hidden', width: '100%', marginTop: 4 }}>
+            <div
+              style={{
+                display: 'flex',
+                width: '200%',
+                transition: 'transform 280ms ease, opacity 280ms ease',
+                transform: signedPageIndex === 0 ? 'translateX(0%)' : 'translateX(-50%)',
+                opacity: signedSlidesOpacity,
+              }}
+            >
+              <div style={{ width: '50%', boxSizing: 'border-box', paddingRight: 0 }}>
+                <WalletStatus
+                  onSignOut={signOut}
+                  evmAddress={currentUser?.evmAccounts || evmAddress}
+                  onContinue={(tokenKey) => { setSelectedTokenKey(tokenKey); goToSigned(1); }}
+                />
+              </div>
+              <div style={{ width: '50%', boxSizing: 'border-box', paddingLeft: 0 }}>
+                <Verify tokenKey={selectedTokenKey} />
+              </div>
+            </div>
+          </div>
         ) : (
           <div style={{ overflow: 'hidden', width: '100%', marginTop: 4 }}>
             <div

@@ -92,7 +92,8 @@ export default function NewsArticle() {
 const styles = {
     page: {
         position: 'relative',
-        minHeight: '100vh',
+        maxHeight: '100vh',
+        overflowY: 'hidden',
     },
     newsContainer: {
         maxWidth: 900,

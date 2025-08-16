@@ -100,9 +100,6 @@ export default function NewsHome() {
 }
 
 const styles = {
-    page: {
-        minHeight: '100vh',
-    },
     container: {
         maxWidth: 980,
         margin: '0 auto',
