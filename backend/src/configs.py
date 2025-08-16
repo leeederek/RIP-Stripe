@@ -275,3 +275,711 @@ class flare_configs:
             "type": "function",
         },
     ]
+
+
+class orbital_configs:
+    PROVIDER_URL = "https://testnet.evm.nodes.onflow.org"
+    CONTRACT_ADDRESS = "0x274725cdEEC749D4E97DC990de45a5Bba76F80C3"
+    ABI = [
+        {
+            "inputs": [
+                {"internalType": "address[]", "name": "_tokens", "type": "address[]"},
+                {"internalType": "string[]", "name": "_symbols", "type": "string[]"},
+                {"internalType": "address", "name": "_owner", "type": "address"},
+            ],
+            "stateMutability": "nonpayable",
+            "type": "constructor",
+        },
+        {
+            "inputs": [{"internalType": "address", "name": "owner", "type": "address"}],
+            "name": "OwnableInvalidOwner",
+            "type": "error",
+        },
+        {
+            "inputs": [
+                {"internalType": "address", "name": "account", "type": "address"}
+            ],
+            "name": "OwnableUnauthorizedAccount",
+            "type": "error",
+        },
+        {"inputs": [], "name": "ReentrancyGuardReentrantCall", "type": "error"},
+        {
+            "inputs": [{"internalType": "address", "name": "token", "type": "address"}],
+            "name": "SafeERC20FailedOperation",
+            "type": "error",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "uint256",
+                    "name": "tickId",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "enum OrbitalTypes.TickState",
+                    "name": "fromState",
+                    "type": "uint8",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "enum OrbitalTypes.TickState",
+                    "name": "toState",
+                    "type": "uint8",
+                },
+            ],
+            "name": "BoundaryCrossed",
+            "type": "event",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "uint256",
+                    "name": "tickId",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "owner",
+                    "type": "address",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "amounts",
+                    "type": "uint256[]",
+                },
+            ],
+            "name": "FeesCollected",
+            "type": "event",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "recipient",
+                    "type": "address",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "amounts",
+                    "type": "uint256[]",
+                },
+            ],
+            "name": "FeesCollected",
+            "type": "event",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "provider",
+                    "type": "address",
+                },
+                {
+                    "indexed": True,
+                    "internalType": "uint256",
+                    "name": "tickId",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "radius",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "k",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "amounts",
+                    "type": "uint256[]",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "feeBps",
+                    "type": "uint256",
+                },
+            ],
+            "name": "LiquidityAdded",
+            "type": "event",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "provider",
+                    "type": "address",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "amounts",
+                    "type": "uint256[]",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "lpTokensMinted",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "newReserves",
+                    "type": "uint256[]",
+                },
+            ],
+            "name": "LiquidityAdded",
+            "type": "event",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "provider",
+                    "type": "address",
+                },
+                {
+                    "indexed": True,
+                    "internalType": "uint256",
+                    "name": "tickId",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "amounts",
+                    "type": "uint256[]",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "fees",
+                    "type": "uint256[]",
+                },
+            ],
+            "name": "LiquidityRemoved",
+            "type": "event",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "provider",
+                    "type": "address",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "amounts",
+                    "type": "uint256[]",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "lpTokensBurned",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "newReserves",
+                    "type": "uint256[]",
+                },
+            ],
+            "name": "LiquidityRemoved",
+            "type": "event",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "previousOwner",
+                    "type": "address",
+                },
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "newOwner",
+                    "type": "address",
+                },
+            ],
+            "name": "OwnershipTransferred",
+            "type": "event",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "trader",
+                    "type": "address",
+                },
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address",
+                },
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "amountIn",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "amountOut",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "segments",
+                    "type": "uint256",
+                },
+            ],
+            "name": "Swap",
+            "type": "event",
+        },
+        {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "internalType": "address",
+                    "name": "trader",
+                    "type": "address",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "tokenInIndex",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "tokenOutIndex",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "amountIn",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256",
+                    "name": "amountOut",
+                    "type": "uint256",
+                },
+                {
+                    "indexed": False,
+                    "internalType": "uint256[]",
+                    "name": "newReserves",
+                    "type": "uint256[]",
+                },
+            ],
+            "name": "Swap",
+            "type": "event",
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "name": "activeTickIds",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [
+                {"internalType": "uint256[]", "name": "amounts", "type": "uint256[]"},
+                {"internalType": "uint256", "name": "capital", "type": "uint256"},
+                {
+                    "internalType": "uint256",
+                    "name": "depegTolerance",
+                    "type": "uint256",
+                },
+                {"internalType": "uint256", "name": "feeBps", "type": "uint256"},
+            ],
+            "name": "addLiquidity",
+            "outputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "uint256",
+                            "name": "tickId",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "kValue",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "radius",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "depegProtection",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "capitalEfficiency",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "virtualReserves",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256[]",
+                            "name": "initialReserves",
+                            "type": "uint256[]",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "effectiveDeposit",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256[]",
+                            "name": "leftoverAmounts",
+                            "type": "uint256[]",
+                        },
+                        {"internalType": "bool", "name": "success", "type": "bool"},
+                        {"internalType": "string", "name": "message", "type": "string"},
+                    ],
+                    "internalType": "struct OrbitalTypes.LiquidityResult",
+                    "name": "result",
+                    "type": "tuple",
+                }
+            ],
+            "stateMutability": "nonpayable",
+            "type": "function",
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "name": "boundaryTickIds",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [
+                {"internalType": "uint256", "name": "tickId", "type": "uint256"}
+            ],
+            "name": "collectFees",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "getPoolStats",
+            "outputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "string[]",
+                            "name": "tokenSymbols",
+                            "type": "string[]",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "totalTicks",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "interiorTicks",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "boundaryTicks",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256[]",
+                            "name": "totalReserves",
+                            "type": "uint256[]",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "totalLiquidity",
+                            "type": "uint256",
+                        },
+                    ],
+                    "internalType": "struct OrbitalTypes.PoolStats",
+                    "name": "",
+                    "type": "tuple",
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [
+                {"internalType": "uint8", "name": "tokenInIndex", "type": "uint8"},
+                {"internalType": "uint8", "name": "tokenOutIndex", "type": "uint8"},
+                {"internalType": "uint256", "name": "amountIn", "type": "uint256"},
+            ],
+            "name": "getQuote",
+            "outputs": [
+                {"internalType": "uint256", "name": "amountOut", "type": "uint256"}
+            ],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "name": "interiorTickIds",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "name": "isBoundaryTick",
+            "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "name": "isInteriorTick",
+            "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "nextTickId",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "owner",
+            "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [
+                {"internalType": "uint256", "name": "tickId", "type": "uint256"}
+            ],
+            "name": "removeLiquidity",
+            "outputs": [
+                {"internalType": "uint256[]", "name": "amounts", "type": "uint256[]"},
+                {"internalType": "uint256[]", "name": "fees", "type": "uint256[]"},
+            ],
+            "stateMutability": "nonpayable",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "renounceOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function",
+        },
+        {
+            "inputs": [
+                {"internalType": "address", "name": "tokenIn", "type": "address"},
+                {"internalType": "address", "name": "tokenOut", "type": "address"},
+                {"internalType": "uint256", "name": "amountIn", "type": "uint256"},
+                {"internalType": "uint256", "name": "minAmountOut", "type": "uint256"},
+                {"internalType": "uint256", "name": "deadline", "type": "uint256"},
+            ],
+            "name": "swap",
+            "outputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "uint256",
+                            "name": "inputAmountGross",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "inputAmountNet",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "outputAmount",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "effectivePrice",
+                            "type": "uint256",
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "segments",
+                            "type": "uint256",
+                        },
+                        {"internalType": "bool", "name": "success", "type": "bool"},
+                        {"internalType": "string", "name": "message", "type": "string"},
+                    ],
+                    "internalType": "struct OrbitalTypes.TradeResult",
+                    "name": "result",
+                    "type": "tuple",
+                }
+            ],
+            "stateMutability": "nonpayable",
+            "type": "function",
+        },
+        {
+            "inputs": [
+                {"internalType": "uint8", "name": "tokenInIndex", "type": "uint8"},
+                {"internalType": "uint8", "name": "tokenOutIndex", "type": "uint8"},
+                {"internalType": "uint256", "name": "amountIn", "type": "uint256"},
+                {"internalType": "uint256", "name": "minAmountOut", "type": "uint256"},
+                {"internalType": "address", "name": "recipient", "type": "address"},
+            ],
+            "name": "swapExactIn",
+            "outputs": [
+                {"internalType": "uint256", "name": "amountOut", "type": "uint256"}
+            ],
+            "stateMutability": "nonpayable",
+            "type": "function",
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "name": "tickIdToIndex",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "name": "ticks",
+            "outputs": [
+                {"internalType": "uint256", "name": "tickId", "type": "uint256"},
+                {"internalType": "address", "name": "owner", "type": "address"},
+                {"internalType": "uint256", "name": "k", "type": "uint256"},
+                {"internalType": "uint256", "name": "radius", "type": "uint256"},
+                {"internalType": "uint256", "name": "liquidity", "type": "uint256"},
+                {
+                    "internalType": "enum OrbitalTypes.TickState",
+                    "name": "state",
+                    "type": "uint8",
+                },
+                {"internalType": "uint256", "name": "feeBps", "type": "uint256"},
+            ],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "tokenCount",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [{"internalType": "address", "name": "", "type": "address"}],
+            "name": "tokenIndex",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "name": "tokenSymbols",
+            "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "name": "tokens",
+            "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "totalLiquidity",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [],
+            "name": "totalReserves",
+            "outputs": [{"internalType": "uint256[]", "name": "", "type": "uint256[]"}],
+            "stateMutability": "view",
+            "type": "function",
+        },
+        {
+            "inputs": [
+                {"internalType": "address", "name": "newOwner", "type": "address"}
+            ],
+            "name": "transferOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function",
+        },
+    ]
+
+
+class merchant_configs:
+    """
+    Configurations and constants for merchant interactions.
+    """
+
+    MERCHANT_ID_TO_MERCHANT_MAP = {
+        1000: "NYTIMES",
+    }
+
+    MERCHANT_TO_CURRENCY_MAP = {
+        "NYTIMES": ["USDC", "USDT", "DAI", "PYUSD", "USDe", "FRAX"],
+    }
+
+
+class genius_configs:
+    DATA: dict
