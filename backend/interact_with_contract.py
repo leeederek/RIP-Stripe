@@ -11,6 +11,8 @@ if not web3.is_connected():
     exit()
 
 # Contract details
+## Contract Code is in onchain/src/OrbitalPool.sol
+## Contract Abi is in onchain/abi/OrbitalPool.json
 orbital_pool_address = "0x274725cdEEC749D4E97DC990de45a5Bba76F80C3"  # Replace with your contract address
 orbital_pool_abi = [
     {
