@@ -2,13 +2,14 @@
 RIPStripe is on-chain financial infrastructure for merchants to accept [GENIUS Act](https://www.congress.gov/bill/119th-congress/senate-bill/394/text) Compliant stablecoin payments: instantly and globally for 10x less compared to Stripe (0.15% vs. [Stripe's 1.5% fee for stablecoin payments](https://stripe.com/pricing#payments)). RIPStripe supports PYUSD, USDC, USDT, and USDe.
 
 Under the hood, RIPStripe uses a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital), Coinbase's x402 `HTTP 402: Payment Required` response type, and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps from a single liquidity pool. 
+
+## User Flow:
+<img width="1000" height="612" alt="RIPStripe_diagram1" src="https://github.com/user-attachments/assets/84e6ee0f-0c12-4a91-835a-80b7e9897b0f" />
+
 * :white_check_mark: Merchants get GENIUS Act Compliant, borderless, and instant payments infrastructure for 10x cheaper without needing to know/use the blockchain directly.
 * :white_check_mark: Customers pay using any stablecoin they want and from any chain they are on.
 * :white_check_mark: Stablecoin issuers get direct, on-chain distribution for their assets in the Ethereum ecosystem without fragmenting liquidity.
 * :white_check_mark: Liquidity providers, like with UniswapV3, reap swap fees by concentrating their liquidity around $1.00 but across hundreds of stablecoins in a single pool: unlocking unparalleled capital efficiency.
-
-## User Flow:
-<img width="1000" height="612" alt="RIPStripe_diagram1" src="https://github.com/user-attachments/assets/84e6ee0f-0c12-4a91-835a-80b7e9897b0f" />
 
 ## Tech stack
 #### 1. Orbital: A new AMM [design by Paradigm](https://www.paradigm.xyz/2025/06/orbital) that supports swaps between hundreds of stablecoins from a single pool: offering unified liquidity while being highly capital efficient and robust
