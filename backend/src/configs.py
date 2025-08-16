@@ -1,5 +1,17 @@
-## Flare Network Oracle Configs
 class flare_configs:
+    """
+    Configuration for Flare network interactions.
+
+    Note:
+    The ABI is a definition of the contract's interface, which allows interaction with the smart contract on the blockchain.
+    The address is to get the particular contract on the a particular network. The RPC URL is the endpoint for some network.
+
+    To find/run a smart contract on a blockchain, you'll need the ABI (which is associated with the contract and can probably
+    be found in the documentation of the contract online), the address of the contract, the url of the network and then you can
+    use these to interact with the contract using a library like Web3.py (check ABI for inputs and outputs of functions).
+
+    """
+
     FTSOV2_ADDRESS = "0x3d893C53D9e8056135C26C8c638B76C8b60Df726"
     # FtsoV2 address (Flare Testnet Coston2), check https://dev.flare.network/ftso/solidity-reference for prod?
     RPC_URL = "https://coston2-api.flare.network/ext/C/rpc"
