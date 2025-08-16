@@ -1,3 +1,5 @@
 fastapi
+pydantic
+pymongo
 uvicorn
 web3
