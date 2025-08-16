@@ -4,16 +4,16 @@ RIPStripe is on-chain financial infrastructure for merchants to accept [GENIUS A
 Under the hood, RIPStripe uses a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital), Coinbase's x402 `HTTP 402: Payment Required` response type, and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps from a single liquidity pool. 
 
 ## User Flow:
-<img width="1386" height="929" alt="RIPStripe_diagram1" src="https://github.com/user-attachments/assets/7d8488b5-1a2b-4f4c-a4f2-f9a64a71c84b" />
+<img width="1392" height="967" alt="Screenshot 2025-08-16 at 6 37 57 PM" src="https://github.com/user-attachments/assets/0b52479c-276a-4f21-8af9-c2f7fd5baa71" />
 
 * :white_check_mark: Merchants get GENIUS Act Compliant, borderless, and instant payments infrastructure for 10x cheaper without needing to know/use the blockchain directly.
 * :white_check_mark: Customers pay using any stablecoin they want and from any chain they are on.
 * :white_check_mark: Stablecoin issuers get direct, on-chain distribution for their assets in the Ethereum ecosystem without fragmenting liquidity.
-* :white_check_mark: Liquidity providers, like with UniswapV3, reap swap fees by concentrating their liquidity around $1.00 but across hundreds of stablecoins in a single pool: unlocking unparalleled capital efficiency.
+* :white_check_mark: Liquidity providers, like with UniswapV3, earn valuable swap fees by concentrating their liquidity around $1.00 but across hundreds of stablecoins in a single pool: unlocking unparalleled capital efficiency.
 
 ## Tech stack
 ### 1. Orbital: A new AMM [design by Paradigm](https://www.paradigm.xyz/2025/06/orbital) that supports swaps between hundreds of stablecoins from a single pool: offering unified liquidity while being highly capital efficient and robust
-To enable highly capital efficient stablecoin swaps between merchants and customers, RIPStripe implements the [Orbital](https://www.paradigm.xyz/2025/06/orbital) AMM design deployed on Arbitrum One. This design is unique because it applies the concept of [UniswapV3's concentrated liquidity](https://docs.uniswap.org/concepts/protocol/concentrated-liquidity) to a new type of liquidity pool that can support hundreds of stablecoins, including PYUSD, UDSC, USDT, USDe, and many others. Animations below are from the [Orbital Whitepaper](https://www.paradigm.xyz/2025/06/orbital).
+To enable highly capital efficient stablecoin swaps between merchants and customers, RIPStripe implements the [Orbital](https://www.paradigm.xyz/2025/06/orbital) AMM design. This design is unique because it applies the concept of [UniswapV3's concentrated liquidity](https://docs.uniswap.org/concepts/protocol/concentrated-liquidity) to a new type of liquidity pool that can support hundreds of stablecoins, including PYUSD, UDSC, USDT, USDe, and many others. Animations below are from the [Orbital Whitepaper](https://www.paradigm.xyz/2025/06/orbital).
 
 | <img src="https://raw.githubusercontent.com/leeederek/sphere-swap/main/media/orbital-gif-1.gif" width="400" alt="Orbital GIF 1" /> | <img src="https://raw.githubusercontent.com/leeederek/sphere-swap/main/media/orbital-gif-2.gif" width="400" alt="Orbital GIF 2" /> |
 |---|---|
@@ -33,7 +33,7 @@ RIPStripe ingests monthly compliance data from issuers of all stablecoins that a
 Most of this information is mandated by the US Government for US-issued stablecoins as part of the recently passed GENIUS Act and making this information available and actionable for merchants is a key differentiator of RIPStripe that does not exist on the market today.
 
 ### 4. LayerZero OFTs for a chain-abstracted experience 
-LayerZero OFT Adapters are used to burn and mint tokens from other chains before initiating swaps with the Orbital stablecoin AMM pool as Orbital's smart contracts themselves reside on Arbitrum for its low transaction costs (<$0.01) and fast blocktimes (250ms). 
+LayerZero OFT Adapters are used to burn and mint tokens from other chains before initiating swaps with the Orbital stablecoin AMM pool as Orbital's smart contracts themselves reside on Ethereum Sepolia
 
 ## Motivation
 Stablecoins are the future of global finance and capitalizing on this momentum with trustless solutions is critical to ensuring we don't build new centralized systems that are extractive and closed. Today, Stripe charges merchants large fees for processing payments. With the advent of blockchain technology, we can democratize access to payments infrastructure while making them cheaper and more efficient too for a more globally connected, collaborative economy.
