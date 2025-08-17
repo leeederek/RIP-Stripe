@@ -1,13 +1,8 @@
-import { signEvmTransaction } from '@coinbase/cdp-core';
-import { useEvmAddress, useSendEvmTransaction } from '@coinbase/cdp-hooks';
-import { createPublicClient, http, formatEther, parseUnits, encodeFunctionData, getAddress, erc20Abi, decodeErrorResult } from 'viem';
-import { sepolia } from 'viem/chains';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useEvmAddress, useGetAccessToken, useSignEvmTransaction } from '@coinbase/cdp-hooks';
+import { PYUSD_BASE_SEPOLIA_ADDRESS } from './WalletStatus';
 
-const ETH_SEPOLIA_CHAIN_ID = 11155111;
-const PYUSD = getAddress("0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9");
-const USDC = getAddress("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238");
-const SWAP_CONTRACT = "0x66Ca370a48f377E6b9D99bF21007BA5dD238BeE2";
+// Removed unused chain/token constants and viem helpers
 
 // Shared helpers and flow primitives
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,20 +25,104 @@ async function stepVerifyWallet() {
     };
 }
 
-async function stepSimulateTransaction() {
-    await wait(2000);
-    return {
-        merchantRef: 'CONF-12345',
-        status: 'pending',
+const MERCHANT_ADDRESS = '0x74051bf72a90014a515c511fECFe9811dE138235';
+
+
+// Removed unused step stubs
+
+// Settles a payment by first signing an EVM tx using the hook, then POSTing to x402/settle
+// Usage:
+//   const settle = useSettleFetch();
+//   await settle({ accessToken, to, valueWei, resource, description, payTo, asset })
+// eslint-disable-next-line no-unused-vars
+function useSettleFetch() {
+    const { evmAddress } = useEvmAddress();
+    const { signEvmTransaction } = useSignEvmTransaction();
+    const { getAccessToken } = useGetAccessToken();
+
+    return async function settle({
+        value,
+        network = 'base', // 'base' or 'base-sepolia'
+        chainId = 84532, // 8453 (Base), 84532 (Base Sepolia)
+        resource = 'https://api.example.com/premium/resource/123',
+        description = 'Premium API access for data analysis',
+        mimeType = 'application/json',
+        payTo,
+        asset,
+        maxAmountRequired = '0',
+        maxTimeoutSeconds = 10,
+        extra = {},
+    }) {
+        const accessToken = await getAccessToken();
+        console.log("accessToken", accessToken);
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        const validAfter = String(nowSeconds);
+        const validBefore = String(nowSeconds + 600);
+        const nonceHex = '0x' + Date.now().toString(16);
+
+        // Prepare a minimal EIP-1559 transaction to sign
+        const txToSign = {
+            to: payTo,
+            value,
+            chainId,
+            type: 'eip1559',
+        };
+
+        const signed = await signEvmTransaction({
+            evmAccount: evmAddress,
+            transaction: txToSign,
+        });
+
+        const signatureHex = signed?.signedTransaction ?? signed; // hook may return object or raw hex
+
+        const body = {
+            x402Version: 1,
+            paymentPayload: {
+                x402Version: 1,
+                scheme: 'exact',
+                network,
+                payload: {
+                    signature: signatureHex,
+                    authorization: {
+                        from: evmAddress,
+                        to: payTo,
+                        value: String(value),
+                        validAfter,
+                        validBefore,
+                        nonce: nonceHex,
+                    },
+                },
+            },
+            paymentRequirements: {
+                scheme: 'exact',
+                network,
+                maxAmountRequired,
+                resource,
+                description,
+                mimeType,
+                outputSchema: { data: 'string' },
+                payTo,
+                maxTimeoutSeconds,
+                asset,
+                extra,
+            },
+        };
+
+        const res = await fetch('https://api.cdp.coinbase.com/platform/v2/x402/settle', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`Settle failed (${res.status}): ${text}`);
+        }
+        return res.json();
     };
-}
-
-async function stepSignIntent() {
-    await wait(2000);
-}
-
-async function stepFinalize() {
-    await wait(2000);
 }
 
 // Reusable flow hook: drives sequential execution and status updates
@@ -76,11 +155,33 @@ function useVerificationFlow(steps) {
     return { statuses, isRunning, run, reset, results };
 }
 
-export default function Verify({ tokenKey }) {
-    const { evmAddress } = useEvmAddress();
-    const [ethBalance, setEthBalance] = useState(null);
-    const { sendEvmTransaction } = useSendEvmTransaction();
-    const client = useMemo(() => createPublicClient({ chain: sepolia, transport: http() }), []);
+export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
+    const settle = useSettleFetch();
+    const stepSimulateTransaction = useCallback(async () => {
+        await wait(2000);
+        await getArticle();
+        setDoesHaveAccess(true);
+        return {
+            merchantRef: 'CONF-12345',
+            status: 'pending',
+        };
+    }, [getArticle]);
+
+    const stepSettle = useCallback(async () => {
+        await wait(2000);
+        // const res = await settle({
+        //     value: 1,
+        //     network: 'base-sepolia', // 'base' or 'base-sepolia'
+        //     chainId: 84532, // 8453 (Base), 84532 (Base Sepolia)
+        //     resource: 'http://localhost:8000/get-resource/123',
+        //     description: 'Purcahse of article',
+        //     mimeType: 'application/json',
+        //     payTo: MERCHANT_ADDRESS,
+        //     asset: PYUSD_BASE_SEPOLIA_ADDRESS,
+        // });
+        // console.log("res", res);
+        return;
+    }, [settle]);
 
     // Declarative step config: swap out `run` with real endpoints later
     const steps = useMemo(() => ([
@@ -101,7 +202,7 @@ export default function Verify({ tokenKey }) {
             key: 'settlement',
             title: 'Paying',
             description: 'Sending swapped token to merchant',
-            run: stepVerifyWallet,
+            run: stepSettle,
             render: (data) => (
                 <div className="stack" style={{ gap: 4 }}>
                     <div className="helper">Tx hash: {data?.txHash}</div>
@@ -121,7 +222,7 @@ export default function Verify({ tokenKey }) {
                 </div>
             ),
         },
-    ]), []);
+    ]), [stepSimulateTransaction]);
 
     const { statuses: stepStatuses, isRunning, run, results: stepResults } = useVerificationFlow(steps);
 

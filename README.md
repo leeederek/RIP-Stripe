@@ -1,12 +1,13 @@
-# RIPStripe: A cheaper and trustless Stripe alternative for stablecoin payments
-RIPStripe is on-chain financial infrastructure for merchants to accept [GENIUS Act](https://www.congress.gov/bill/119th-congress/senate-bill/394/text) Compliant stablecoin payments: instantly and globally for 10x less compared to Stripe (0.15% vs. [Stripe's 1.5% fee for stablecoin payments](https://stripe.com/pricing#payments)). 
+# Kyma Pay: A cheaper and trustless Stripe alternative for stablecoin payments
+Kyma Pay is on-chain financial infrastructure for merchants to accept [GENIUS Act](https://www.congress.gov/bill/119th-congress/senate-bill/394/text) Compliant stablecoin payments: instantly and globally for 10x less compared to Stripe (0.15% vs. [Stripe's 1.5% fee for stablecoin payments](https://stripe.com/pricing#payments)). Request payment in your preferred token and network while users pay using any stablecoin and from any network they want. Fully chain abstracted.
 
-Request payment in your preferred token and network while users pay using any stablecoin and from any network they want. Fully chain abstracted.
+Under the hood, all swaps are handled instantly on-chain using a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital) that offers high capital efficiency (via concentrated liquidity) and low slippage. Kyma Pay uses the previously abandoned `HTTP 402: Payment Required` response type for programmatic payments and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps to/from a single liquidity pool. 
 
-Under the hood, all swaps are handled instantly on-chain using a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital) that offers high capital efficiency (via concentrated liquidity) and low slippage. RIPStripe uses the previously abandoned `HTTP 402: Payment Required` response type for programmatic payments and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps to/from a single liquidity pool. 
+*Kyma (κῦμα), the Greek word for "wave", symbolizes the powerful wave of transformation that stablecoins are bringing to global finance.”*
 
 ## User Flow:
-<img width="1392" height="967" alt="Screenshot 2025-08-16 at 6 37 57 PM" src="https://github.com/user-attachments/assets/0b52479c-276a-4f21-8af9-c2f7fd5baa71" />
+<img width="1511" height="995" alt="Screenshot 2025-08-17 at 12 12 19 AM" src="https://github.com/user-attachments/assets/5062f785-f93d-4226-89c8-2caa06301b66" />
+
 
 * :white_check_mark: Merchants choose the stablecoin they wish to receive & get access to GENIUS Act Compliant, borderless, and instant payments infrastructure for 10x cheaper without needing to know/use the blockchain directly.
 * :white_check_mark: Customers pay using any stablecoin they want and from any chain they are on with near zero slippage and with deep on-chain liquidity.
@@ -15,7 +16,7 @@ Under the hood, all swaps are handled instantly on-chain using a new type of AMM
 
 ## Tech stack
 ### 1. Orbital: A new AMM [design by Paradigm](https://www.paradigm.xyz/2025/06/orbital) that supports swaps between hundreds of stablecoins from a single pool: offering unified liquidity while being highly capital efficient and robust
-To enable highly capital efficient stablecoin swaps between merchants and customers, RIPStripe implements the [Orbital](https://www.paradigm.xyz/2025/06/orbital) AMM design. This design is unique because it applies the concept of [UniswapV3's concentrated liquidity](https://docs.uniswap.org/concepts/protocol/concentrated-liquidity) to a new type of liquidity pool that can support hundreds of stablecoins, including PYUSD, UDSC, USDT, USDe, and many others. Animations below are from the [Orbital Whitepaper](https://www.paradigm.xyz/2025/06/orbital).
+To enable highly capital efficient stablecoin swaps between merchants and customers, Kyma Pay implements the [Orbital](https://www.paradigm.xyz/2025/06/orbital) AMM design. This design is unique because it applies the concept of [UniswapV3's concentrated liquidity](https://docs.uniswap.org/concepts/protocol/concentrated-liquidity) to a new type of liquidity pool that can support hundreds of stablecoins, including PYUSD, UDSC, USDT, USDe, and many others. Animations below are from the [Orbital Whitepaper](https://www.paradigm.xyz/2025/06/orbital).
 
 | <img src="https://raw.githubusercontent.com/leeederek/sphere-swap/main/media/orbital-gif-1.gif" width="400" alt="Orbital GIF 1" /> | <img src="https://raw.githubusercontent.com/leeederek/sphere-swap/main/media/orbital-gif-2.gif" width="400" alt="Orbital GIF 2" /> |
 |---|---|
@@ -23,18 +24,19 @@ To enable highly capital efficient stablecoin swaps between merchants and custom
 Instead of drawing tick boundaries along a 2D curve like with Uniswap's design (e.g. `y = x * k`), our implementation draws tick boundaries as higher-dimension "orbits" or "spheres" around the $1.00 price point. Certain invariants are enforced to ensure that the collapse/depeg of any stablecoin in the pool will not adversely impact swaps between other stablecoins (since there are greater than 2 axes), allowing for dozens, if not hundreds, of stablecoins to be concentrated into a single pool to unlock unprecedented levels of capital efficiency. 
 
 ### 2. Coinbase's x402: `HTTP 402 Payment Required` response status for the scalability that payment systems need
-We use Coinbase's x402 payment protocol to embed stablecoin payments directly into web applications, such as merchant checkout flows. To be precise: the client receives a `HTTP 402: Payment Required` response when/if they try to access or purchase something without payment. This 402 response from RIPStripe will contain the merchant's accepted stablecoins (if defined) and network. 
+We use Coinbase's x402 payment protocol to embed stablecoin payments directly into web applications, such as merchant checkout flows. To be precise: the client receives a `HTTP 402: Payment Required` response when/if they try to access or purchase something without payment. This 402 response from Kyma Pay will contain the merchant's accepted stablecoins (if defined) and network. 
 
 Settlement and verification of the payment is then handled by [Coinbase's x402 Facilitator](https://docs.cdp.coinbase.com/api-reference/v2/rest-api/x402-facilitator/x402-facilitator) before allowing the customer to complete the transaction. 
 
 Payment to the merchant is done on their preferred network and in their desired stablecoin at the cost of just gas and swap fees (0.15%) - a fraction of the cost that they would otherwise pay to Stripe to accept stablecoin payments.
 
-### 3. GENIUS Act Compliance for risk-based, actionable insights for merchants and liquidity providers 
-RIPStripe ingests monthly compliance data from issuers of all stablecoins that are deposited into its pool. Metrics such as: the breakdown of backing reserves, audit history, circulating supply, liquidity stress test results, and other information are used to produce a Risk Score for merchants to use when assessing which stablecoins to use. 
+### 3. Coinbase's embedded wallets
+We use Coinbase's embedded wallet product to allow new users to provision and login to smart contract wallets using social logins (email, SMS) to make onboarding seamless. 
 
-Most of this information is mandated by the US Government for US-issued stablecoins as part of the recently passed GENIUS Act and making this information available and actionable for merchants is a key differentiator of RIPStripe that does not exist on the market today.
+### 4. GENIUS Act Compliance for risk-based, actionable insights for merchants and liquidity providers 
+Kyma Pay ingests monthly compliance data from issuers of all stablecoins that are deposited into its pool. Metrics such as: the breakdown of backing reserves, audit history, circulating supply, liquidity stress test results, and other information are used to produce a Risk Score for merchants to use when assessing which stablecoins to use. Most of this information is mandated by the US Government for US-issued stablecoins as part of the recently passed GENIUS Act and making this information available and actionable for merchants is a key differentiator of Kyma Pay that does not exist on the market today.
 
-### 4. LayerZero OFTs for a chain-abstracted experience 
+### 5. LayerZero OFTs for a chain-abstracted experience 
 LayerZero OFT Adapters are used to burn and mint tokens from other chains before initiating swaps with the Orbital stablecoin AMM pool as Orbital's smart contracts themselves reside on Ethereum Sepolia
 
 ## Motivation

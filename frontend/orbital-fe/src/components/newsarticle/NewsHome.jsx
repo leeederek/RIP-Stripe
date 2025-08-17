@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import NewsArticle from './NewsArticle';
 import SecurityArticle from './SecurityArticle';
 import EcosystemArticle from './EcosystemArticle';
