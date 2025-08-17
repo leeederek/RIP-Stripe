@@ -284,7 +284,6 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
                 gasLimit: "1000000"
             }
         });
-        console.log("res", res);
         return;
     }, [settle]);
 

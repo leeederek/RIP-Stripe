@@ -71,7 +71,7 @@ async def verify(request: Request):
     facilitator_config: FacilitatorConfig = {"url": merchant_configs.FACILITATOR_URL}
     facilitator = FacilitatorClient(facilitator_config)
     verify_response = await facilitator.verify(decoded_payment, payment_requirements)
-    print(verify_response)
+    print("verify res:", verify_response)
     if not verify_response.is_valid:
         return JSONResponse(
             status_code=402,
@@ -92,6 +92,11 @@ async def verify(request: Request):
         "paymentPayload": decoded_payment.model_dump(by_alias=True),
         "paymentRequirements": payment_requirements.model_dump(by_alias=True),
     }
+    # response = requests.post(
+    #     url=settle_url,
+    #     json=payload,
+    #     headers=headers,
+    # )
     response = requests.post(
         url=settle_url,
         json=payload,
