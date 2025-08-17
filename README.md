@@ -1,13 +1,15 @@
 # RIPStripe: A cheaper and trustless Stripe alternative for stablecoin payments
-RIPStripe is on-chain financial infrastructure for merchants to accept [GENIUS Act](https://www.congress.gov/bill/119th-congress/senate-bill/394/text) Compliant stablecoin payments: instantly and globally for 10x less compared to Stripe (0.15% vs. [Stripe's 1.5% fee for stablecoin payments](https://stripe.com/pricing#payments)). RIPStripe supports PYUSD, USDC, USDT, and USDe.
+Pay in one stablecoin, but the merchant/recipient receives payments in their preferred token at a fraction (10x less) than Stripe's stablecoin payments.
 
-Under the hood, RIPStripe uses a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital), Coinbase's x402 `HTTP 402: Payment Required` response type, and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps from a single liquidity pool. 
+Under the hood, all swaps are handled instantly on-chain using a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital) that offers high capital efficiency (via concentrated liquidity) and low slippage. RIPStripe uses the previously abandoned `HTTP 402: Payment Required` response type for programmatic payments and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps to/from a single liquidity pool. 
+
+RIPStripe is on-chain financial infrastructure for merchants to accept [GENIUS Act](https://www.congress.gov/bill/119th-congress/senate-bill/394/text) Compliant stablecoin payments: instantly and globally for 10x less compared to Stripe (0.15% vs. [Stripe's 1.5% fee for stablecoin payments](https://stripe.com/pricing#payments)). 
 
 ## User Flow:
 <img width="1392" height="967" alt="Screenshot 2025-08-16 at 6 37 57 PM" src="https://github.com/user-attachments/assets/0b52479c-276a-4f21-8af9-c2f7fd5baa71" />
 
-* :white_check_mark: Merchants get GENIUS Act Compliant, borderless, and instant payments infrastructure for 10x cheaper without needing to know/use the blockchain directly.
-* :white_check_mark: Customers pay using any stablecoin they want and from any chain they are on.
+* :white_check_mark: Merchants choose the stablecoin they wish to receive & get access to GENIUS Act Compliant, borderless, and instant payments infrastructure for 10x cheaper without needing to know/use the blockchain directly.
+* :white_check_mark: Customers pay using any stablecoin they want and from any chain they are on with near zero slippage and with deep on-chain liquidity.
 * :white_check_mark: Stablecoin issuers get direct, on-chain distribution for their assets in the Ethereum ecosystem without fragmenting liquidity.
 * :white_check_mark: Liquidity providers, like with UniswapV3, earn valuable swap fees by concentrating their liquidity around $1.00 but across hundreds of stablecoins in a single pool: unlocking unparalleled capital efficiency.
 
