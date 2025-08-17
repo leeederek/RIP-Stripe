@@ -120,7 +120,7 @@ def make_access_token(request):
 
 @router.get("/access-token")
 def get_access_token():
-    return make_access_token()
+    return make_access_token("POST")
 
 
 @router.post("/settle")
