@@ -29,12 +29,13 @@ Settlement and verification of the payment is then handled by [Coinbase's x402 F
 
 Payment to the merchant is done on their preferred network and in their desired stablecoin at the cost of just gas and swap fees (0.15%) - a fraction of the cost that they would otherwise pay to Stripe to accept stablecoin payments.
 
-### 3. GENIUS Act Compliance for risk-based, actionable insights for merchants and liquidity providers 
-RIPStripe ingests monthly compliance data from issuers of all stablecoins that are deposited into its pool. Metrics such as: the breakdown of backing reserves, audit history, circulating supply, liquidity stress test results, and other information are used to produce a Risk Score for merchants to use when assessing which stablecoins to use. 
+### 3. Coinbase's embedded wallets
+We use Coinbase's embedded wallet product to allow new users to provision and login to smart contract wallets using social logins (email, SMS) to make onboarding seamless. 
 
-Most of this information is mandated by the US Government for US-issued stablecoins as part of the recently passed GENIUS Act and making this information available and actionable for merchants is a key differentiator of RIPStripe that does not exist on the market today.
+### 4. GENIUS Act Compliance for risk-based, actionable insights for merchants and liquidity providers 
+RIPStripe ingests monthly compliance data from issuers of all stablecoins that are deposited into its pool. Metrics such as: the breakdown of backing reserves, audit history, circulating supply, liquidity stress test results, and other information are used to produce a Risk Score for merchants to use when assessing which stablecoins to use. Most of this information is mandated by the US Government for US-issued stablecoins as part of the recently passed GENIUS Act and making this information available and actionable for merchants is a key differentiator of RIPStripe that does not exist on the market today.
 
-### 4. LayerZero OFTs for a chain-abstracted experience 
+### 5. LayerZero OFTs for a chain-abstracted experience 
 LayerZero OFT Adapters are used to burn and mint tokens from other chains before initiating swaps with the Orbital stablecoin AMM pool as Orbital's smart contracts themselves reside on Ethereum Sepolia
 
 ## Motivation
