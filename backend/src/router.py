@@ -37,7 +37,7 @@ async def get_resource(resource_id: int, request: Request):
     )
 
 
-@router.post("/verify/")
+@router.get("/verify/")
 async def verify(request: Request):
     payment_header = request.headers.get("X-PAYMENT", "")
     payment_obj = safe_base64_decode(payment_header)
