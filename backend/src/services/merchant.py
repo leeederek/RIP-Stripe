@@ -1,16 +1,5 @@
 from src.configs import merchant_configs, orbital_configs, genius_configs
 from web3 import HTTPProvider, Web3
-from x402.chains import (
-    get_chain_id,
-    get_token_name,
-    get_token_version,
-)
-from x402.types import (
-    PaymentRequirements,
-    TokenAmount,
-    TokenAsset,
-    EIP712Domain,
-)
 
 from typing import Dict, Any, Optional
 
@@ -455,5 +444,5 @@ def check_genius_compliance(coin: str) -> bool:
 #     return comparison
 
 
-def get_payment_requirements():
+def resolve_merchant_payment_reqs(resource_id: int):
     return merchant_configs.PAYMENT_REQUIREMENT

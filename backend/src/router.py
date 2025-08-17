@@ -1,31 +1,31 @@
 import fastapi
-from fastapi import HTTPException, Request
+from fastapi import Request
 from fastapi.responses import JSONResponse
-from src.configs import merchant_configs
+from src.configs import merchant_configs, premium_data
 from src.services import oracle, merchant
 from src import models
 from x402.types import x402PaymentRequiredResponse, PaymentPayload
 from x402.facilitator import FacilitatorClient, FacilitatorConfig
-from x402.exact import decode_payment
 
 router = fastapi.APIRouter()
 
 
 @router.get("/")
 async def root():
-    return {"Hello": "World"}
+    return {}
 
 
 @router.get("/get-resource/{resource_id}")
 async def get_resource(resource_id: int, request: Request):
-    # accepted_currencies = merchant.get_valid_payment_currencies(resource_id)
-    payment_requirements = merchant.get_payment_requirements()
+    # Get the PaymentRequirement for a requested merchant resource.
+    payment_requirements = merchant.resolve_merchant_payment_reqs(resource_id)
     error_data = x402PaymentRequiredResponse(
         x402_version=1,
         error=str("Payment required"),
         accepts=[payment_requirements],
     ).model_dump(by_alias=True)
 
+    # Return the merchant PaymentRequirement.
     return JSONResponse(
         status_code=402,
         content=error_data,
@@ -35,13 +35,11 @@ async def get_resource(resource_id: int, request: Request):
 
 @router.post("/verify/")
 async def verify(request: Request):
-    json_dict = await request.json()
-    decoded_payment = PaymentPayload(**json_dict["paymentPayload"])
-    FACILITATOR_URL = "https://x402.org/facilitator"
-    # NETWORK = "base-sepolia"
+    request_payload = await request.json()
+    decoded_payment = PaymentPayload(**request_payload["paymentPayload"])
 
     # Facilitator to check payment confirmation
-    facilitator_config: FacilitatorConfig = {"url": FACILITATOR_URL}
+    facilitator_config: FacilitatorConfig = {"url": merchant_configs.FACILITATOR_URL}
     facilitator = FacilitatorClient(facilitator_config)
     verify_response = await facilitator.verify(
         decoded_payment, merchant_configs.PAYMENT_REQUIREMENT
@@ -53,14 +51,13 @@ async def verify(request: Request):
             headers={"Content-Type": "application/json"},
         )
     # Successful payment returns web content.
-    return {"TITLE": "THIS IS A WEB ARTICLE"}
+    return premium_data.DATA
 
 
 @router.get("/price/{stablecoin}")
 async def get_price(stablecoin: str):
     stablecoin = stablecoin.upper()
     price, date = oracle.get_stablecoin_price(stablecoin)
-    print(price)
     return {"Stablecoin": stablecoin, "Price": f"${price}", "fetched at": date}
 
 

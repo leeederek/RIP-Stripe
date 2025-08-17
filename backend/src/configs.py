@@ -1000,7 +1000,7 @@ class merchant_configs:
         "NYTIMES": ["USDC", "USDT", "DAI", "PYUSD", "USDe", "FRAX"],
     }
 
-    price = TokenAmount(
+    PRICE = TokenAmount(
         amount="1000",
         asset=TokenAsset(
             address="0x036CbD53842c5426634e7929541eC2318f3dCF7e",  # USDC on Base Sepolia
@@ -1009,33 +1009,39 @@ class merchant_configs:
         ),
     )
 
-    network = "base-sepolia"
-    resource = "url"  # url
-    description = "Access to weather data (Custom Token)"
+    FACILITATOR_URL = "https://x402.org/facilitator"
+    NETWORK = "base-sepolia"
+    RESOURCE = "url"  # url
+    DESCRIPTION = "Access to weather data (Custom Token)"
     # Get USDC address for the network
-    chain_id = get_chain_id(network)
-    asset_address = price.asset.address
+    CHAIN_ID = get_chain_id(NETWORK)
+    ASSET_ADDRESS = PRICE.asset.address
+    WALLET_ADDRESS = "0x0"
 
     # Get EIP-712 domain info
-    eip712_domain = {
-        "name": get_token_name(chain_id, asset_address),
-        "version": get_token_version(chain_id, asset_address),
+    EIP712_DOMAIN = {
+        "name": get_token_name(CHAIN_ID, ASSET_ADDRESS),
+        "version": get_token_version(CHAIN_ID, ASSET_ADDRESS),
     }
 
     PAYMENT_REQUIREMENT = PaymentRequirements(
         scheme="exact",
-        network=network,
-        max_amount_required=price.amount,
-        resource=resource,
-        description=description,
+        network=NETWORK,
+        max_amount_required=PRICE.amount,
+        resource=RESOURCE,
+        description=DESCRIPTION,
         mime_type="application/json",
-        pay_to=str(0x0),  # need wallet
+        pay_to=WALLET_ADDRESS,
         max_timeout_seconds=60,
-        asset=asset_address,
+        asset=ASSET_ADDRESS,
         output_schema=None,
-        extra=eip712_domain,
+        extra=EIP712_DOMAIN,
     )
 
 
 class genius_configs:
     DATA: dict
+
+
+class premium_data:
+    DATA = {"title": "THIS IS PREMIUM DATA"}
