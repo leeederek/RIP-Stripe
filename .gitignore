@@ -9,3 +9,9 @@ __pycache__/
 pythonDev/
 .env
 venv/
+
+*.sh
+
+PRIVATE.md
+
+*.json
