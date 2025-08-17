@@ -10,6 +10,7 @@ from cdp.auth.utils.jwt import generate_jwt, JwtOptions
 import requests
 from x402.types import PaymentRequirements
 from x402.encoding import safe_base64_decode
+import json
 
 router = fastapi.APIRouter()
 
@@ -43,7 +44,7 @@ async def verify(request: Request):
     payment_obj = safe_base64_decode(payment_header)
     # request_payload = safe_base64_decode(str(request))
     # print(request_payload)
-    decoded_payment = PaymentPayload(**payment_obj)
+    decoded_payment = PaymentPayload(**json.loads(payment_obj))
 
     access_token = make_access_token("GET")
 
