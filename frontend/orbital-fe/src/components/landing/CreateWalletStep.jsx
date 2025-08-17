@@ -137,7 +137,7 @@ export default function CreateWalletStep({ method, onBack, onContinue }) {
             {renderContent()}
             <div className="row" style={{ marginTop: 6 }}>
                 <button className="btn" onClick={onBack} disabled={loading}>Back</button>
-                <button className="btn btn-primary" onClick={handlePrimary} disabled={loading}>
+                <button className="btn-primary" onClick={handlePrimary} disabled={loading}>
                     {getPrimaryButtonLabel()}
                 </button>
             </div>

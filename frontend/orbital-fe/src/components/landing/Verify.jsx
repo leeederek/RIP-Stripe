@@ -15,14 +15,27 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // Individual step executors (replace bodies with real endpoint logic later)
 async function stepInitialize() {
     await wait(2000);
+    return {
+        route: 'Mock DEX route',
+        amountIn: '1.00 PYUSD',
+        expectedOut: '0.99 USDC',
+    };
 }
 
 async function stepVerifyWallet() {
     await wait(2000);
+    return {
+        txHash: '0xabc…1234',
+        gasLimit: '120,000',
+    };
 }
 
 async function stepSimulateTransaction() {
     await wait(2000);
+    return {
+        merchantRef: 'CONF-12345',
+        status: 'pending',
+    };
 }
 
 async function stepSignIntent() {
@@ -37,8 +50,12 @@ async function stepFinalize() {
 function useVerificationFlow(steps) {
     const [statuses, setStatuses] = useState(() => steps.map(() => 'idle'));
     const [isRunning, setIsRunning] = useState(false);
+    const [results, setResults] = useState(() => steps.map(() => null));
 
-    const reset = () => setStatuses(steps.map(() => 'idle'));
+    const reset = () => {
+        setStatuses(steps.map(() => 'idle'));
+        setResults(steps.map(() => null));
+    };
 
     const run = async () => {
         if (isRunning) return;
@@ -47,7 +64,8 @@ function useVerificationFlow(steps) {
         try {
             for (let i = 0; i < steps.length; i++) {
                 setStatuses((prev) => prev.map((s, idx) => (idx === i ? 'active' : s)));
-                await steps[i].run();
+                const data = await steps[i].run();
+                setResults((prev) => prev.map((r, idx) => (idx === i ? data : r)));
                 setStatuses((prev) => prev.map((s, idx) => (idx === i ? 'done' : s)));
             }
         } finally {
@@ -55,7 +73,7 @@ function useVerificationFlow(steps) {
         }
     };
 
-    return { statuses, isRunning, run, reset };
+    return { statuses, isRunning, run, reset, results };
 }
 
 export default function Verify({ tokenKey }) {
@@ -66,12 +84,46 @@ export default function Verify({ tokenKey }) {
 
     // Declarative step config: swap out `run` with real endpoints later
     const steps = useMemo(() => ([
-        { key: 'swap', title: 'Swap', description: 'Swapping your original currency to the merchant\'s currency', run: stepInitialize },
-        { key: 'settlement', title: 'Paying', description: 'Sending swapped token to merchant', run: stepVerifyWallet },
-        { key: 'verify', title: 'Verifying', description: 'Verifying the transaction with the merchant', run: stepSimulateTransaction },
+        {
+            key: 'swap',
+            title: 'Swap',
+            description: 'Swapping your original currency to the merchant\'s currency',
+            run: stepInitialize,
+            render: (data) => (
+                <div className="stack" style={{ gap: 4 }}>
+                    <div className="helper">Route: {data?.route}</div>
+                    <div className="helper">In: {data?.amountIn}</div>
+                    <div className="helper">Expected out: {data?.expectedOut}</div>
+                </div>
+            ),
+        },
+        {
+            key: 'settlement',
+            title: 'Paying',
+            description: 'Sending swapped token to merchant',
+            run: stepVerifyWallet,
+            render: (data) => (
+                <div className="stack" style={{ gap: 4 }}>
+                    <div className="helper">Tx hash: {data?.txHash}</div>
+                    <div className="helper">Gas limit: {data?.gasLimit}</div>
+                </div>
+            ),
+        },
+        {
+            key: 'verify',
+            title: 'Verifying',
+            description: 'Verifying the transaction with the merchant',
+            run: stepSimulateTransaction,
+            render: (data) => (
+                <div className="stack" style={{ gap: 4 }}>
+                    <div className="helper">Ref: {data?.merchantRef}</div>
+                    <div className="helper">Status: {data?.status}</div>
+                </div>
+            ),
+        },
     ]), []);
 
-    const { statuses: stepStatuses, isRunning, run } = useVerificationFlow(steps);
+    const { statuses: stepStatuses, isRunning, run, results: stepResults } = useVerificationFlow(steps);
 
     // useEffect(() => {
     //     (async () => {
@@ -268,7 +320,7 @@ export default function Verify({ tokenKey }) {
 
     return (
         <div className="card" style={{ padding: 14 }}>
-            <div className="stack" style={{ gap: 8 }}>
+            <div className="stack" style={{ gap: 8, marginBottom: 6 }}>
                 <div className="kicker">Confirmation</div>
                 <div style={{ fontWeight: 700, fontSize: 18 }}>We're about to send your payment</div>
                 <div className="helper">Your original currency will be converted to the merchant's currency</div>
@@ -280,21 +332,30 @@ export default function Verify({ tokenKey }) {
                     const isActive = status === 'active';
                     const isDone = status === 'done';
                     return (
-                        <div key={idx} className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div className="row" style={{ alignItems: 'center', gap: 10 }}>
-                                <div className="step-index" aria-label={`step-${idx + 1}`}>{idx + 1}</div>
-                                <div className="stack" style={{ gap: 2 }}>
-                                    <div style={{ fontWeight: 600 }}>{step.title}</div>
-                                    <div className="helper">{step.description}</div>
+                        <div key={idx} className="stack" style={{ gap: 8 }}>
+                            <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div className="row" style={{ alignItems: 'center', gap: 10 }}>
+                                    <div className="step-index" aria-label={`step-${idx + 1}`}>{idx + 1}</div>
+                                    <div className="stack" style={{ gap: 2 }}>
+                                        <div style={{ fontWeight: 600 }}>{step.title}</div>
+                                        <div className="helper">{step.description}</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    {isActive ? (
+                                        <span className="spinner" aria-label="loading" />
+                                    ) : isDone ? (
+                                        <span className="tag" aria-label="done">✓</span>
+                                    ) : null}
                                 </div>
                             </div>
-                            <div>
-                                {isActive ? (
-                                    <span className="spinner" aria-label="loading" />
-                                ) : isDone ? (
-                                    <span className="tag" aria-label="done">✓</span>
-                                ) : null}
-                            </div>
+                            {stepResults[idx] ? (
+                                <div style={{ paddingLeft: 34 }}>
+                                    {typeof step.render === 'function'
+                                        ? step.render(stepResults[idx])
+                                        : <div className="helper">{JSON.stringify(stepResults[idx])}</div>}
+                                </div>
+                            ) : null}
                         </div>
                     );
                 })}
@@ -303,7 +364,7 @@ export default function Verify({ tokenKey }) {
             <div className="row" style={{ marginTop: 14 }}>
                 <button
                     className="btn-primary"
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, marginTop: 12 }}
                     onClick={run}
                     disabled={isRunning}
                 >
