@@ -1,414 +1,719 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 import "../src/OrbitalPool.sol";
-import "../src/libraries/OrbitalTypes.sol";
-import "./mocks/MockERC20.sol";
+import "../src/MockERC20.sol";
 
 contract OrbitalPoolTest is Test {
     OrbitalPool public pool;
-    MockERC20[] public tokens;
+    MockERC20 public tokenA;
+    MockERC20 public tokenB;
+    MockERC20 public tokenC;
+    MockERC20 public tokenD;
     
     address public owner = address(0x1);
-    address public lp1 = address(0x2);
-    address public lp2 = address(0x3);
-    address public lp3 = address(0x4);
-    address public trader = address(0x5);
+    address public user1 = address(0x2);
+    address public user2 = address(0x3);
+    address public user3 = address(0x4);
     
-    uint256 constant PRECISION = 1e18;
-    uint256 constant INITIAL_BALANCE = 1000000 * 1e18;
+    address[] public tokens;
     
+    uint256 public constant INITIAL_SUPPLY = 1_000_000 * 1e6;
+    uint256 public constant USER_BALANCE = 100_000 * 1e6;
     
     function setUp() public {
-        vm.startPrank(owner);
+        // Deploy tokens
+        tokenA = new MockERC20("Token A", "TKNA", 6, INITIAL_SUPPLY);
+        tokenB = new MockERC20("Token B", "TKNB", 6, INITIAL_SUPPLY);
+        tokenC = new MockERC20("Token C", "TKNC", 6, INITIAL_SUPPLY);
+        tokenD = new MockERC20("Token D", "TKND", 6, INITIAL_SUPPLY);
+        
+        // Setup token array
+        tokens.push(address(tokenA));
+        tokens.push(address(tokenB));
+        tokens.push(address(tokenC));
+        tokens.push(address(tokenD));
+        
+        // Deploy pool
+        vm.prank(owner);
+        pool = new OrbitalPool(tokens);
+        
+        // Distribute tokens to users
+        tokenA.transfer(user1, USER_BALANCE);
+        tokenA.transfer(user2, USER_BALANCE);
+        tokenA.transfer(user3, USER_BALANCE);
+        
+        tokenB.transfer(user1, USER_BALANCE);
+        tokenB.transfer(user2, USER_BALANCE);
+        tokenB.transfer(user3, USER_BALANCE);
+        
+        tokenC.transfer(user1, USER_BALANCE);
+        tokenC.transfer(user2, USER_BALANCE);
+        tokenC.transfer(user3, USER_BALANCE);
+        
+        tokenD.transfer(user1, USER_BALANCE);
+        tokenD.transfer(user2, USER_BALANCE);
+        tokenD.transfer(user3, USER_BALANCE);
     }
     
-    function createTokens(uint256 count) internal returns (address[] memory tokenAddresses, string[] memory symbols) {
-        tokenAddresses = new address[](count);
-        symbols = new string[](count);
-        
-        for (uint256 i = 0; i < count; i++) {
-            string memory symbol = string(abi.encodePacked("TKN", vm.toString(i)));
-            MockERC20 token = new MockERC20(
-                string(abi.encodePacked("Token ", vm.toString(i))),
-                symbol,
-                18
-            );
-            tokens.push(token);
-            tokenAddresses[i] = address(token);
-            symbols[i] = symbol;
-            
-            // Mint tokens to test addresses
-            token.mint(lp1, INITIAL_BALANCE);
-            token.mint(lp2, INITIAL_BALANCE);
-            token.mint(lp3, INITIAL_BALANCE);
-            token.mint(trader, INITIAL_BALANCE);
-        }
+    function testPoolInitialization() public {
+        assertEq(pool.tokenCount(), 4);
+        assertEq(address(pool.tokens(0)), address(tokenA));
+        assertEq(address(pool.tokens(1)), address(tokenB));
+        assertEq(address(pool.tokens(2)), address(tokenC));
+        assertEq(address(pool.tokens(3)), address(tokenD));
+        assertEq(pool.owner(), owner);
     }
     
-    function approveTokens(address user, address poolAddress, uint256 amount) internal {
-        vm.startPrank(user);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            tokens[i].approve(poolAddress, amount);
-        }
-        vm.stopPrank();
-    }
-    
-    function test_ThreeLiquidityProvidersFlow() public {
-        // Create 4-token pool
-        (address[] memory tokenAddresses, string[] memory symbols) = createTokens(4);
-        pool = new OrbitalPool(tokenAddresses, symbols, owner);
+    function testAddLiquidity() public {
+        vm.startPrank(user1);
         
-        // Approve tokens for all users
-        approveTokens(lp1, address(pool), type(uint256).max);
-        approveTokens(lp2, address(pool), type(uint256).max);
-        approveTokens(lp3, address(pool), type(uint256).max);
-        approveTokens(trader, address(pool), type(uint256).max);
-        
-        // LP1 adds liquidity
-        vm.startPrank(lp1);
-        uint256[] memory amounts1 = new uint256[](4);
-        amounts1[0] = 10000 * 1e18;
-        amounts1[1] = 10000 * 1e18;
-        amounts1[2] = 10000 * 1e18;
-        amounts1[3] = 10000 * 1e18;
-        
-        OrbitalTypes.LiquidityResult memory result1 = pool.addLiquidity(
-            amounts1,
-            0,
-            0.99 * 1e18, // 99% depeg tolerance
-            30 // 0.3% fee
-        );
-        vm.stopPrank();
-        
-        assertEq(result1.success, true);
-        uint256 tickId1 = result1.tickId;
-        
-        // LP2 adds liquidity
-        vm.startPrank(lp2);
-        uint256[] memory amounts2 = new uint256[](4);
-        amounts2[0] = 5000 * 1e18;
-        amounts2[1] = 5000 * 1e18;
-        amounts2[2] = 5000 * 1e18;
-        amounts2[3] = 5000 * 1e18;
-        
-        OrbitalTypes.LiquidityResult memory result2 = pool.addLiquidity(
-            amounts2,
-            0,
-            0.98 * 1e18, // 98% depeg tolerance
-            50 // 0.5% fee
-        );
-        vm.stopPrank();
-        
-        assertEq(result2.success, true);
-        uint256 tickId2 = result2.tickId;
-        
-        // LP3 adds liquidity
-        vm.startPrank(lp3);
-        uint256[] memory amounts3 = new uint256[](4);
-        amounts3[0] = 7500 * 1e18;
-        amounts3[1] = 7500 * 1e18;
-        amounts3[2] = 7500 * 1e18;
-        amounts3[3] = 7500 * 1e18;
-        
-        OrbitalTypes.LiquidityResult memory result3 = pool.addLiquidity(
-            amounts3,
-            0,
-            0.995 * 1e18, // 99.5% depeg tolerance
-            20 // 0.2% fee
-        );
-        vm.stopPrank();
-        
-        assertEq(result3.success, true);
-        uint256 tickId3 = result3.tickId;
-        
-        // Execute some swaps
-        vm.startPrank(trader);
-        
-        // Swap 1: Token0 -> Token1
-        uint256 swapAmount1 = 100 * 1e18;
-        uint256 balanceBefore1 = tokens[1].balanceOf(trader);
-        
-        OrbitalTypes.TradeResult memory trade1 = pool.swap(
-            tokenAddresses[0],
-            tokenAddresses[1],
-            swapAmount1,
-            0,
-            block.timestamp + 3600
-        );
-        
-        uint256 balanceAfter1 = tokens[1].balanceOf(trader);
-        assertGt(balanceAfter1, balanceBefore1);
-        
-        // Swap 2: Token2 -> Token3
-        uint256 swapAmount2 = 200 * 1e18;
-        uint256 balanceBefore2 = tokens[3].balanceOf(trader);
-        
-        OrbitalTypes.TradeResult memory trade2 = pool.swap(
-            tokenAddresses[2],
-            tokenAddresses[3],
-            swapAmount2,
-            0,
-            block.timestamp + 3600
-        );
-        
-        uint256 balanceAfter2 = tokens[3].balanceOf(trader);
-        assertGt(balanceAfter2, balanceBefore2);
-        
-        // Swap 3: Token1 -> Token0 (reverse)
-        uint256 swapAmount3 = 150 * 1e18;
-        pool.swap(
-            tokenAddresses[1],
-            tokenAddresses[0],
-            swapAmount3,
-            0,
-            block.timestamp + 3600
-        );
-        
-        vm.stopPrank();
-        
-        // LP1 removes liquidity
-        vm.startPrank(lp1);
-        uint256[] memory balancesBefore = new uint256[](4);
-        for (uint256 i = 0; i < 4; i++) {
-            balancesBefore[i] = tokens[i].balanceOf(lp1);
-        }
-        
-        (uint256[] memory amounts, uint256[] memory fees) = pool.removeLiquidity(tickId1);
-        
-        // Check LP1 received tokens back plus fees
-        for (uint256 i = 0; i < 4; i++) {
-            uint256 balanceAfter = tokens[i].balanceOf(lp1);
-            assertGt(balanceAfter, balancesBefore[i]);
-            assertGt(amounts[i] + fees[i], 0);
-        }
-        vm.stopPrank();
-        
-        // LP3 removes liquidity
-        vm.startPrank(lp3);
-        pool.removeLiquidity(tickId3);
-        vm.stopPrank();
-        
-        // Verify LP2's position still exists
-        OrbitalTypes.PoolStats memory stats = pool.getPoolStats();
-        assertEq(stats.totalTicks, 1); // Only LP2's tick remains
-    }
-    
-    function test_FourTokenStablecoinPool() public {
-        // Create 4 stablecoin tokens
-        MockERC20 usdc = new MockERC20("USD Coin", "USDC", 6);
-        MockERC20 usdt = new MockERC20("Tether", "USDT", 6);
-        MockERC20 pyusd = new MockERC20("PayPal USD", "PYUSD", 6);
-        MockERC20 dai = new MockERC20("Dai Stablecoin", "DAI", 18);
-        
-        address[] memory stableAddresses = new address[](4);
-        stableAddresses[0] = address(usdc);
-        stableAddresses[1] = address(usdt);
-        stableAddresses[2] = address(pyusd);
-        stableAddresses[3] = address(dai);
-        
-        string[] memory stableSymbols = new string[](4);
-        stableSymbols[0] = "USDC";
-        stableSymbols[1] = "USDT";
-        stableSymbols[2] = "PYUSD";
-        stableSymbols[3] = "DAI";
-        
-        // Create pool
-        pool = new OrbitalPool(stableAddresses, stableSymbols, owner);
-        
-        // Mint and approve tokens
-        vm.startPrank(lp1);
-        usdc.mint(lp1, 1000000 * 1e6); // 1M USDC
-        usdt.mint(lp1, 1000000 * 1e6); // 1M USDT
-        pyusd.mint(lp1, 1000000 * 1e6); // 1M PYUSD
-        dai.mint(lp1, 1000000 * 1e18); // 1M DAI
-        
-        usdc.approve(address(pool), type(uint256).max);
-        usdt.approve(address(pool), type(uint256).max);
-        pyusd.approve(address(pool), type(uint256).max);
-        dai.approve(address(pool), type(uint256).max);
-        
-        // Add liquidity with normalized amounts
+        // Prepare amounts for liquidity
         uint256[] memory amounts = new uint256[](4);
-        amounts[0] = 100000 * 1e6;  // 100k USDC
-        amounts[1] = 100000 * 1e6;  // 100k USDT
-        amounts[2] = 100000 * 1e6;  // 100k PYUSD
-        amounts[3] = 100000 * 1e18; // 100k DAI
+        amounts[0] = 1000 * 1e6; // tokenA
+        amounts[1] = 1000 * 1e6; // tokenB
+        amounts[2] = 1000 * 1e6; // tokenC
+        amounts[3] = 1000 * 1e6; // tokenD
         
-        OrbitalTypes.LiquidityResult memory result = pool.addLiquidity(
-            amounts,
-            0,
-            0.995 * 1e18, // 99.5% depeg tolerance for stablecoins
-            10 // 0.1% fee for stablecoin pool
-        );
-        
-        assertEq(result.success, true);
-        vm.stopPrank();
-        
-        // Test swaps between stablecoins
-        vm.startPrank(trader);
-        usdc.mint(trader, 10000 * 1e6);
-        usdc.approve(address(pool), type(uint256).max);
-        
-        // Swap USDC to DAI using index-based swap
-        uint256 daiBefore = dai.balanceOf(trader);
-        
-        uint256 amountOut = pool.swapExactIn(
-            0, // USDC index
-            3, // DAI index
-            1000 * 1e6, // 1000 USDC
-            0,
-            trader
-        );
-        
-        uint256 daiAfter = dai.balanceOf(trader);
-        assertGt(daiAfter, daiBefore);
-        
-        // The output should be close to input considering decimal differences
-        // 1000 USDC (6 decimals) should give approximately 1000 DAI (18 decimals)
-        assertApproxEqRel(amountOut, 1000 * 1e18, 0.01 * 1e18); // 1% tolerance
-        
-        vm.stopPrank();
-    }
-    
-    function test_TenTokenPoolLowSlippage() public {
-        // Create 10-token pool
-        (address[] memory tokenAddresses, string[] memory symbols) = createTokens(10);
-        pool = new OrbitalPool(tokenAddresses, symbols, owner);
-        
-        // Large liquidity provider adds significant liquidity
-        vm.startPrank(lp1);
-        for (uint256 i = 0; i < 10; i++) {
-            tokens[i].approve(address(pool), type(uint256).max);
-        }
-        
-        uint256[] memory largeAmounts = new uint256[](10);
-        for (uint256 i = 0; i < 10; i++) {
-            largeAmounts[i] = 100000 * 1e18; // 100k tokens each
-        }
-        
-        OrbitalTypes.LiquidityResult memory result = pool.addLiquidity(
-            largeAmounts,
-            0,
-            0.99 * 1e18, // 99% depeg tolerance
-            30 // 0.3% fee
-        );
-        
-        assertEq(result.success, true);
-        vm.stopPrank();
-        
-        // Execute multiple swaps and measure slippage
-        vm.startPrank(trader);
-        for (uint256 i = 0; i < 10; i++) {
-            tokens[i].approve(address(pool), type(uint256).max);
-        }
-        
-        // Test 1: Small swap (0.1% of pool)
-        uint256 smallSwap = 100 * 1e18;
-        uint256 quote1 = pool.getQuote(0, 1, smallSwap);
-        
-        OrbitalTypes.TradeResult memory trade1 = pool.swap(
-            tokenAddresses[0],
-            tokenAddresses[1],
-            smallSwap,
-            0,
-            block.timestamp + 3600
-        );
-        
-        // For small swaps, output should be very close to input
-        uint256 slippage1 = ((smallSwap - trade1.outputAmount) * 1e18) / smallSwap;
-        assertLt(slippage1, 0.005 * 1e18); // Less than 0.5% slippage
-        
-        // Test 2: Medium swap (1% of pool)
-        uint256 mediumSwap = 1000 * 1e18;
-        OrbitalTypes.TradeResult memory trade2 = pool.swap(
-            tokenAddresses[2],
-            tokenAddresses[3],
-            mediumSwap,
-            0,
-            block.timestamp + 3600
-        );
-        
-        uint256 slippage2 = ((mediumSwap - trade2.outputAmount) * 1e18) / mediumSwap;
-        assertLt(slippage2, 0.02 * 1e18); // Less than 2% slippage
-        
-        // Test 3: Sequential swaps through multiple tokens
-        uint256 amount = 500 * 1e18;
-        uint256[] memory balances = new uint256[](5);
-        
-        // Record initial balance
-        balances[0] = tokens[0].balanceOf(trader);
-        
-        // Swap chain: Token0 -> Token1 -> Token2 -> Token3 -> Token4
-        for (uint256 i = 0; i < 4; i++) {
-            pool.swap(
-                tokenAddresses[i],
-                tokenAddresses[i + 1],
-                amount,
-                0,
-                block.timestamp + 3600
-            );
-            
-            // Use output as input for next swap
-            amount = tokens[i + 1].balanceOf(trader) - balances[i + 1];
-            balances[i + 1] = tokens[i + 1].balanceOf(trader);
-        }
-        
-        // Final amount should still be close to initial due to low slippage
-        uint256 finalAmount = tokens[4].balanceOf(trader) - balances[4];
-        uint256 totalSlippage = ((500 * 1e18 - finalAmount) * 1e18) / (500 * 1e18);
-        
-        // Even after 4 swaps, total slippage should be reasonable
-        assertLt(totalSlippage, 0.05 * 1e18); // Less than 5% total slippage
-        
-        vm.stopPrank();
-        
-        // Verify pool maintains balance
-        OrbitalTypes.PoolStats memory stats = pool.getPoolStats();
-        assertEq(stats.totalTicks, 1);
-        assertGt(stats.totalLiquidity, 0);
-    }
-    
-    function test_SwapExactInWithRecipient() public {
-        // Create 3-token pool
-        (address[] memory tokenAddresses, string[] memory symbols) = createTokens(3);
-        pool = new OrbitalPool(tokenAddresses, symbols, owner);
+        // Approve tokens
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
         
         // Add liquidity
-        vm.startPrank(lp1);
-        for (uint256 i = 0; i < 3; i++) {
-            tokens[i].approve(address(pool), type(uint256).max);
+        uint256 planeConstant = 1000 * 1e18; // Less than radius
+        uint256 tickIndex = pool.addLiquidity(amounts, planeConstant);
+        
+        // Verify tick was created
+        assertEq(tickIndex, 0);
+        
+        // Check tick info
+        (
+            uint256 radius,
+            uint256 constant_,
+            bool isInterior,
+            address tickOwner,
+            uint256[] memory reserves
+        ) = pool.getTickInfo(tickIndex);
+        
+        assertGt(radius, 0);
+        assertEq(constant_, planeConstant);
+        assertTrue(isInterior);
+        assertEq(tickOwner, user1);
+        assertEq(reserves.length, 4);
+        
+        // Check user ticks
+        uint256[] memory userTicks = pool.getUserTicks(user1);
+        assertEq(userTicks.length, 1);
+        assertEq(userTicks[0], tickIndex);
+        
+        vm.stopPrank();
+    }
+    
+    function testAddLiquidityMultipleTicks() public {
+        // User1 adds first liquidity
+        vm.startPrank(user1);
+        uint256[] memory amounts1 = new uint256[](4);
+        amounts1[0] = 1000 * 1e6;
+        amounts1[1] = 1000 * 1e6;
+        amounts1[2] = 1000 * 1e6;
+        amounts1[3] = 1000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts1[0]);
+        tokenB.approve(address(pool), amounts1[1]);
+        tokenC.approve(address(pool), amounts1[2]);
+        tokenD.approve(address(pool), amounts1[3]);
+        
+        uint256 tick1 = pool.addLiquidity(amounts1, 1000 * 1e6);
+        vm.stopPrank();
+        
+        // User2 adds second liquidity
+        vm.startPrank(user2);
+        uint256[] memory amounts2 = new uint256[](4);
+        amounts2[0] = 2000 * 1e6;
+        amounts2[1] = 2000 * 1e6;
+        amounts2[2] = 2000 * 1e6;
+        amounts2[3] = 2000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts2[0]);
+        tokenB.approve(address(pool), amounts2[1]);
+        tokenC.approve(address(pool), amounts2[2]);
+        tokenD.approve(address(pool), amounts2[3]);
+        
+        uint256 tick2 = pool.addLiquidity(amounts2, 1500 * 1e18);
+        vm.stopPrank();
+        
+        assertEq(tick1, 0);
+        assertEq(tick2, 1);
+        
+        // Check reserves
+        uint256[] memory totalReserves = pool.getReserves();
+        assertGt(totalReserves[0], amounts1[0]);
+        assertGt(totalReserves[1], amounts1[1]);
+    }
+    
+    function testSwap() public {
+        // First add liquidity
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 10000 * 1e6;
+        amounts[1] = 10000 * 1e6;
+        amounts[2] = 10000 * 1e6;
+        amounts[3] = 10000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        pool.addLiquidity(amounts, 5000 * 1e6);
+        vm.stopPrank();
+        
+        // User2 performs swap
+        vm.startPrank(user2);
+        uint256 swapAmount = 100 * 1e6;
+        tokenA.approve(address(pool), swapAmount);
+        
+        uint256 balanceBeforeA = tokenA.balanceOf(user2);
+        uint256 balanceBeforeB = tokenB.balanceOf(user2);
+        
+        // Swap tokenA for tokenB
+        uint256 amountOut = pool.swap(0, 1, swapAmount, 1);
+        
+        uint256 balanceAfterA = tokenA.balanceOf(user2);
+        uint256 balanceAfterB = tokenB.balanceOf(user2);
+        
+        // Verify swap occurred
+        assertEq(balanceAfterA, balanceBeforeA - swapAmount);
+        assertGt(balanceAfterB, balanceBeforeB);
+        assertGt(amountOut, 0);
+        
+        vm.stopPrank();
+    }
+    
+    function testGetAmountOut() public {
+        console.log("=== Starting testGetAmountOut ===");
+        
+        // Add liquidity first
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 10000 * 1e6;
+        amounts[1] = 10000 * 1e6;
+        amounts[2] = 10000 * 1e6;
+        amounts[3] = 10000 * 1e6;
+        
+        console.log("Adding liquidity:");
+        console.log("  Token A amount:", amounts[0]);
+        console.log("  Token B amount:", amounts[1]);
+        console.log("  Token C amount:", amounts[2]);
+        console.log("  Token D amount:", amounts[3]);
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        uint256 tickIndex = pool.addLiquidity(amounts, 5000 * 1e6);
+        console.log("Liquidity added at tick index:", tickIndex);
+        
+        // Check reserves after adding liquidity
+        uint256[] memory reserves = pool.getReserves();
+        console.log("Pool reserves after liquidity:");
+        console.log("  Reserve A:", reserves[0]);
+        console.log("  Reserve B:", reserves[1]);
+        console.log("  Reserve C:", reserves[2]);
+        console.log("  Reserve D:", reserves[3]);
+        
+        vm.stopPrank();
+        
+        // Test quote functionality
+        uint256 swapAmount = 100 * 1e6;
+        console.log("\nTesting getAmountOut:");
+        console.log("  Token In Index: 0 (Token A)");
+        console.log("  Token Out Index: 1 (Token B)");
+        console.log("  Swap Amount:", swapAmount);
+        
+        try pool.getAmountOut(0, 1, swapAmount) returns (uint256 expectedOut) {
+            console.log("  Expected output amount:", expectedOut);
+            console.log("  Swap fee:", pool.swapFee(), "basis points");
+            
+            if (expectedOut == 0) {
+                console.log("ERROR: Expected output is zero!");
+            }
+            
+            if (expectedOut >= swapAmount) {
+                console.log("ERROR: Expected output is greater than or equal to input!");
+                console.log("  This suggests fee calculation or swap math issue");
+            }
+            
+            assertGt(expectedOut, 0, "Expected output should be greater than zero");
+            assertLt(expectedOut, swapAmount, "Expected output should be less than input due to fees");
+            
+            console.log("=== testGetAmountOut passed ===");
+        } catch Error(string memory reason) {
+            console.log("ERROR: getAmountOut reverted with:", reason);
+            revert(reason);
+        } catch (bytes memory lowLevelData) {
+            console.log("ERROR: getAmountOut failed with low-level error");
+            console.logBytes(lowLevelData);
+            revert("getAmountOut failed");
+        }
+    }
+    
+    function testRemoveLiquidity() public {
+        // Add liquidity first
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 1000 * 1e6;
+        amounts[1] = 1000 * 1e6;
+        amounts[2] = 1000 * 1e6;
+        amounts[3] = 1000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        uint256 tickIndex = pool.addLiquidity(amounts, 500 * 1e6);
+        
+        // Record balances before removal
+        uint256 balanceBeforeA = tokenA.balanceOf(user1);
+        uint256 balanceBeforeB = tokenB.balanceOf(user1);
+        
+        // Remove 50% of liquidity
+        uint256 fraction = 5e17; // 0.5 in 1e18 scale
+        uint256[] memory returnedAmounts = pool.removeLiquidity(tickIndex, fraction);
+        
+        uint256 balanceAfterA = tokenA.balanceOf(user1);
+        uint256 balanceAfterB = tokenB.balanceOf(user1);
+        
+        // Verify tokens were returned
+        assertGt(balanceAfterA, balanceBeforeA);
+        assertGt(balanceAfterB, balanceBeforeB);
+        assertGt(returnedAmounts[0], 0);
+        assertGt(returnedAmounts[1], 0);
+        
+        vm.stopPrank();
+    }
+    
+    function testGetSpotPrice() public {
+        // Add liquidity
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 1000 * 1e6;
+        amounts[1] = 2000 * 1e6; // Different amounts to create price difference
+        amounts[2] = 1000 * 1e6;
+        amounts[3] = 1000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        pool.addLiquidity(amounts, 1000 * 1e6);
+        vm.stopPrank();
+        
+        // Get spot price
+        uint256 priceAB = pool.getSpotPrice(0, 1);
+        uint256 priceBA = pool.getSpotPrice(1, 0);
+        
+        assertGt(priceAB, 0);
+        assertGt(priceBA, 0);
+        
+        // Prices should be inversely related (approximately)
+        uint256 product = (priceAB * priceBA) / 1e6;
+        assertApproxEqRel(product, 1e6, 1e5); // Within 10% due to AMM curve
+    }
+    
+    function testTickEfficiency() public {
+        // Add liquidity
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 1000 * 1e6;
+        amounts[1] = 1000 * 1e6;
+        amounts[2] = 1000 * 1e6;
+        amounts[3] = 1000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        uint256 tickIndex = pool.addLiquidity(amounts, 500 * 1e6);
+        vm.stopPrank();
+        
+        uint256 efficiency = pool.getTickEfficiency(tickIndex);
+        assertGt(efficiency, 0);
+    }
+    
+    function testOwnerFunctions() public {
+        // Test setting swap fee
+        vm.prank(owner);
+        pool.setSwapFee(50); // 0.5%
+        assertEq(pool.swapFee(), 50);
+        
+        // Test non-owner cannot set fee
+        vm.prank(user1);
+        vm.expectRevert();
+        pool.setSwapFee(25);
+    }
+    
+    function testRevertInvalidAmountsLength() public {
+        vm.startPrank(user1);
+        
+        // Wrong amounts array length
+        uint256[] memory amounts = new uint256[](3); // Should be 4
+        amounts[0] = 1000 * 1e6;
+        amounts[1] = 1000 * 1e6;
+        amounts[2] = 1000 * 1e6;
+        
+        vm.expectRevert("Invalid amounts length");
+        pool.addLiquidity(amounts, 500 * 1e6);
+        vm.stopPrank();
+    }
+    
+    function testRevertZeroLiquidity() public {
+        vm.startPrank(user1);
+        
+        uint256[] memory amounts = new uint256[](4);
+        // All zeros - should fail
+        
+        vm.expectRevert("Zero liquidity");
+        pool.addLiquidity(amounts, 0);
+        vm.stopPrank();
+    }
+    
+    function testRevertInvalidPlaneConstant() public {
+        vm.startPrank(user1);
+        
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 1000 * 1e6;
+        amounts[1] = 1000 * 1e6;
+        amounts[2] = 1000 * 1e6;
+        amounts[3] = 1000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        // Plane constant greater than radius should fail
+        vm.expectRevert("Invalid plane constant");
+        pool.addLiquidity(amounts, 3000 * 1e6);
+        vm.stopPrank();
+    }
+    
+    function testRevertSameTokenSwap() public {
+        // Add liquidity first
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 1000 * 1e6;
+        amounts[1] = 1000 * 1e6;
+        amounts[2] = 1000 * 1e6;
+        amounts[3] = 1000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        pool.addLiquidity(amounts, 500 * 1e6);
+        vm.stopPrank();
+        
+        // Try to swap same token
+        vm.startPrank(user2);
+        tokenA.approve(address(pool), 100 * 1e6);
+        vm.expectRevert("Same token");
+        pool.swap(0, 0, 100 * 1e6, 1); // Same token index
+        vm.stopPrank();
+    }
+
+    // ===== MULTIPLE SWAP SLIPPAGE TESTS =====
+    
+    function testMultipleSwapsSlippageControl() public {
+        // Add initial liquidity
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 10000 * 1e6; // 10,000 tokens each
+        amounts[1] = 10000 * 1e6;
+        amounts[2] = 10000 * 1e6;
+        amounts[3] = 10000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        pool.addLiquidity(amounts, 5000 * 1e6);
+        vm.stopPrank();
+        
+        // Get initial spot prices
+        uint256 initialPriceAB = pool.getSpotPrice(0, 1);
+        uint256 initialPriceBC = pool.getSpotPrice(1, 2);
+        uint256 initialPriceCD = pool.getSpotPrice(2, 3);
+        
+        console.log("Initial prices:");
+        console.log("  A/B:", initialPriceAB);
+        console.log("  B/C:", initialPriceBC);
+        console.log("  C/D:", initialPriceCD);
+        
+        // Perform multiple swaps in sequence
+        vm.startPrank(user2);
+        
+        // Swap 1: A -> B
+        uint256 swap1Amount = 100 * 1e6; // 100 tokens
+        tokenA.approve(address(pool), swap1Amount);
+        uint256 amountOut1 = pool.swap(0, 1, swap1Amount, 0);
+        console.log("Swap 1 (A->B):", swap1Amount, "->", amountOut1);
+        
+        // Swap 2: B -> C
+        uint256 swap2Amount = 50 * 1e6; // 50 tokens
+        tokenB.approve(address(pool), swap2Amount);
+        uint256 amountOut2 = pool.swap(1, 2, swap2Amount, 0);
+        console.log("Swap 2 (B->C):", swap2Amount, "->", amountOut2);
+        
+        // Swap 3: C -> D
+        uint256 swap3Amount = 25 * 1e6; // 25 tokens
+        tokenC.approve(address(pool), swap3Amount);
+        uint256 amountOut3 = pool.swap(2, 3, swap3Amount, 0);
+        console.log("Swap 3 (C->D):", swap3Amount, "->", amountOut3);
+        
+        vm.stopPrank();
+        
+        // Get final spot prices
+        uint256 finalPriceAB = pool.getSpotPrice(0, 1);
+        uint256 finalPriceBC = pool.getSpotPrice(1, 2);
+        uint256 finalPriceCD = pool.getSpotPrice(2, 3);
+        
+        console.log("Final prices:");
+        console.log("  A/B:", finalPriceAB);
+        console.log("  B/C:", finalPriceBC);
+        console.log("  C/D:", finalPriceCD);
+        
+        // Calculate price changes and slippage
+        uint256 slippageAB = _calculateSlippage(initialPriceAB, finalPriceAB);
+        uint256 slippageBC = _calculateSlippage(initialPriceBC, finalPriceBC);
+        uint256 slippageCD = _calculateSlippage(initialPriceCD, finalPriceCD);
+        
+        console.log("Slippage percentages:");
+        console.log("  A/B:", slippageAB, "%");
+        console.log("  B/C:", slippageBC, "%");
+        console.log("  C/D:", slippageCD, "%");
+        
+        // Assert slippage is reasonable (less than 2% for multiple swaps)
+        assertLt(slippageAB, 200, "Slippage A/B should be less than 2%");
+        assertLt(slippageBC, 200, "Slippage B/C should be less than 2%");
+        assertLt(slippageCD, 200, "Slippage C/D should be less than 2%");
+        
+        // Log slippage analysis
+        console.log("Slippage Analysis:");
+        console.log("  A/B: High slippage due to multiple swaps affecting same pair");
+        console.log("  B/C: Moderate slippage due to intermediate swap");
+        console.log("  C/D: Low slippage due to single swap");
+    }
+    
+    function testLargeSwapSlippageControl() public {
+        // Add substantial liquidity
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 100000 * 1e6; // 100,000 tokens each
+        amounts[1] = 100000 * 1e6;
+        amounts[2] = 100000 * 1e6;
+        amounts[3] = 100000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        pool.addLiquidity(amounts, 50000 * 1e6);
+        vm.stopPrank();
+        
+        // Get initial price
+        uint256 initialPrice = pool.getSpotPrice(0, 1);
+        console.log("Initial A/B price:", initialPrice);
+        
+        // Perform large swap
+        vm.startPrank(user2);
+        uint256 largeSwapAmount = 1000 * 1e6; // 1,000 tokens (1% of liquidity)
+        tokenA.approve(address(pool), largeSwapAmount);
+        
+        uint256 amountOut = pool.swap(0, 1, largeSwapAmount, 0);
+        console.log("Large swap (A->B):", largeSwapAmount, "->", amountOut);
+        vm.stopPrank();
+        
+        // Get final price
+        uint256 finalPrice = pool.getSpotPrice(0, 1);
+        console.log("Final A/B price:", finalPrice);
+        
+        // Calculate slippage
+        uint256 slippage = _calculateSlippage(initialPrice, finalPrice);
+        console.log("Large swap slippage:", slippage, "%");
+        
+        // Assert slippage is less than 1%
+        assertLt(slippage, 100, "Large swap slippage should be less than 1%");
+    }
+    
+    function testSingleSwapSlippageControl() public {
+        // Add liquidity
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 50000 * 1e6; // 50,000 tokens each
+        amounts[1] = 50000 * 1e6;
+        amounts[2] = 50000 * 1e6;
+        amounts[3] = 50000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        pool.addLiquidity(amounts, 25000 * 1e6);
+        vm.stopPrank();
+        
+        // Test single swap A -> B
+        uint256 initialPrice = pool.getSpotPrice(0, 1);
+        console.log("Initial A/B price:", initialPrice);
+        
+        vm.startPrank(user2);
+        uint256 swapAmount = 100 * 1e6; // 100 tokens (0.2% of liquidity)
+        tokenA.approve(address(pool), swapAmount);
+        
+        uint256 amountOut = pool.swap(0, 1, swapAmount, 0);
+        console.log("Single swap (A->B):", swapAmount, "->", amountOut);
+        vm.stopPrank();
+        
+        uint256 finalPrice = pool.getSpotPrice(0, 1);
+        console.log("Final A/B price:", finalPrice);
+        
+        uint256 slippage = _calculateSlippage(initialPrice, finalPrice);
+        console.log("Single swap slippage:", slippage, "%");
+        
+        // Single swaps should have very low slippage (< 0.5%)
+        assertLt(slippage, 50, "Single swap slippage should be less than 0.5%");
+    }
+    
+    function testConsecutiveSmallSwapsSlippage() public {
+        // Add liquidity
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 50000 * 1e6; // 50,000 tokens each
+        amounts[1] = 50000 * 1e6;
+        amounts[2] = 50000 * 1e6;
+        amounts[3] = 50000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        pool.addLiquidity(amounts, 25000 * 1e6);
+        vm.stopPrank();
+        
+        uint256 initialPrice = pool.getSpotPrice(0, 1);
+        console.log("Initial A/B price:", initialPrice);
+        
+        // Perform 10 consecutive small swaps
+        vm.startPrank(user2);
+        uint256 totalSlippage = 0;
+        
+        for (uint256 i = 0; i < 10; i++) {
+            uint256 swapAmount = 10 * 1e6; // 10 tokens each
+            tokenA.approve(address(pool), swapAmount);
+            
+            uint256 amountOut = pool.swap(0, 1, swapAmount, 0);
+            console.log("Swap", i + 1);
+            console.log("(A->B):", swapAmount, "->", amountOut);
+            
+            // Calculate cumulative slippage
+            uint256 currentPrice = pool.getSpotPrice(0, 1);
+            uint256 slippage = _calculateSlippage(initialPrice, currentPrice);
+            totalSlippage = slippage;
+            
+            console.log("  Cumulative slippage:", slippage, "%");
+        }
+        vm.stopPrank();
+        
+        uint256 finalPrice = pool.getSpotPrice(0, 1);
+        uint256 finalSlippage = _calculateSlippage(initialPrice, finalPrice);
+        
+        console.log("Final A/B price:", finalPrice);
+        console.log("Final cumulative slippage:", finalSlippage, "%");
+        
+        // Assert final slippage is less than 1%
+        assertLt(finalSlippage, 100, "Cumulative slippage should be less than 1%");
+    }
+    
+    function testBidirectionalSwapSlippage() public {
+        // Add liquidity
+        vm.startPrank(user1);
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 75000 * 1e6; // 75,000 tokens each
+        amounts[1] = 75000 * 1e6;
+        amounts[2] = 75000 * 1e6;
+        amounts[3] = 75000 * 1e6;
+        
+        tokenA.approve(address(pool), amounts[0]);
+        tokenB.approve(address(pool), amounts[1]);
+        tokenC.approve(address(pool), amounts[2]);
+        tokenD.approve(address(pool), amounts[3]);
+        
+        pool.addLiquidity(amounts, 37500 * 1e6);
+        vm.stopPrank();
+        
+        uint256 initialPriceAB = pool.getSpotPrice(0, 1);
+        uint256 initialPriceBA = pool.getSpotPrice(1, 0);
+        console.log("Initial A/B price:", initialPriceAB);
+        console.log("Initial B/A price:", initialPriceBA);
+        
+        // Forward swap: A -> B
+        vm.startPrank(user2);
+        uint256 forwardAmount = 500 * 1e6;
+        tokenA.approve(address(pool), forwardAmount);
+        uint256 forwardOut = pool.swap(0, 1, forwardAmount, 0);
+        console.log("Forward swap (A->B):", forwardAmount, "->", forwardOut);
+        vm.stopPrank();
+        
+        uint256 midPriceAB = pool.getSpotPrice(0, 1);
+        uint256 slippageForward = _calculateSlippage(initialPriceAB, midPriceAB);
+        console.log("Forward swap slippage:", slippageForward, "%");
+        
+        // Reverse swap: B -> A
+        vm.startPrank(user3);
+        uint256 reverseAmount = 500 * 1e6;
+        tokenB.approve(address(pool), reverseAmount);
+        uint256 reverseOut = pool.swap(1, 0, reverseAmount, 0);
+        console.log("Reverse swap (B->A):", reverseAmount, "->", reverseOut);
+        vm.stopPrank();
+        
+        uint256 finalPriceAB = pool.getSpotPrice(0, 1);
+        uint256 slippageReverse = _calculateSlippage(midPriceAB, finalPriceAB);
+        uint256 totalSlippage = _calculateSlippage(initialPriceAB, finalPriceAB);
+        
+        console.log("Reverse swap slippage:", slippageReverse, "%");
+        console.log("Total bidirectional slippage:", totalSlippage, "%");
+        
+        // Assert slippages are reasonable
+        assertLt(slippageForward, 100, "Forward swap slippage should be less than 1%");
+        assertLt(slippageReverse, 100, "Reverse swap slippage should be less than 1%");
+        assertLt(totalSlippage, 150, "Total bidirectional slippage should be less than 1.5%");
+    }
+    
+    // Helper function to calculate slippage percentage (in basis points)
+    function _calculateSlippage(uint256 initialPrice, uint256 finalPrice) internal pure returns (uint256) {
+        if (initialPrice == 0) return 0;
+        
+        uint256 priceChange;
+        if (finalPrice > initialPrice) {
+            priceChange = finalPrice - initialPrice;
+        } else {
+            priceChange = initialPrice - finalPrice;
         }
         
-        uint256[] memory amounts = new uint256[](3);
-        amounts[0] = 10000 * 1e18;
-        amounts[1] = 10000 * 1e18;
-        amounts[2] = 10000 * 1e18;
-        
-        pool.addLiquidity(amounts, 0, 0.99 * 1e18, 30);
-        vm.stopPrank();
-        
-        // Test swapExactIn with different recipient
-        address recipient = address(0x999);
-        vm.startPrank(trader);
-        tokens[0].approve(address(pool), type(uint256).max);
-        
-        uint256 recipientBefore = tokens[1].balanceOf(recipient);
-        uint256 traderBefore = tokens[1].balanceOf(trader);
-        
-        uint256 amountOut = pool.swapExactIn(
-            0, // token 0
-            1, // token 1
-            100 * 1e18,
-            0,
-            recipient
-        );
-        
-        // Verify recipient received tokens, not trader
-        assertEq(tokens[1].balanceOf(recipient), recipientBefore + amountOut);
-        assertEq(tokens[1].balanceOf(trader), traderBefore);
-        
-        vm.stopPrank();
+        // Convert to basis points (1% = 100 basis points)
+        return (priceChange * 10000) / initialPrice;
     }
 }

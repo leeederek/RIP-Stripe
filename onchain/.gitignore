@@ -13,5 +13,7 @@ docs/
 # Dotenv file
 .env
 
+# Deployment commands (contains private keys)
+deployment-commands.md
 
 lib/

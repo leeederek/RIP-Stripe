@@ -5,3 +5,4 @@ uvicorn
 web3
 x402
 cdp-sdk
+python-dotenv

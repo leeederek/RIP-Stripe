@@ -1,702 +1,563 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
-import "./libraries/OrbitalCoreMath.sol";
-import "./libraries/OrbitalTypes.sol";
-import "./libraries/Math.sol";
-import "./interfaces/IOrbitalPool.sol";
+// Import OpenZeppelin contracts
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./libraries/OrbitalMath.sol";
 
-/// @title OrbitalPoolPaper
-/// @notice Multi-token AMM with per-tick liquidity following the Paradigm Orbital paper
-/// @dev Supports N tokens with individual tick management and dynamic boundary crossing
-contract OrbitalPool is IOrbitalPool, ReentrancyGuard, Ownable {
-    using SafeERC20 for IERC20;
-    using OrbitalCoreMath for uint256[];
-    using OrbitalCoreMath for uint256;
-    using Math for uint256;
+/**
+ * @title OrbitalPool
+ * @notice Complete Orbital AMM implementation for N-token pools with concentrated liquidity
+ * @dev Combines all components into a single contract for easier deployment
+ */
+contract OrbitalPool is ReentrancyGuard, Ownable {
+    
+    // ============ Structs ============
+    
+    /**
+     * @notice Represents a liquidity tick in N-dimensional space
+     * @dev Each tick is a sphere with optional plane boundary constraint
+     */
+    struct Tick {
+        uint256 radius;          // r: sphere radius (liquidity amount)
+        uint256 planeConstant;   // c: plane boundary distance
+        bool isInterior;         // Whether reserves are interior or on boundary
+        uint256[] reserves;      // Current reserve state
+        address owner;           // LP who owns this tick
+        bool active;             // Whether tick is active
+    }
+    
+    /**
+     * @notice Pool information structure
+     */
+    struct PoolInfo {
+        address[] tokens;
+        uint256 tokenCount;
+        uint256 totalVolume;
+        uint256 createdAt;
+    }
+    
+    // ============ State Variables ============
     
     // Pool configuration
-    uint256 public immutable tokenCount;
-    address[] public tokens;
-    string[] public tokenSymbols;
-    mapping(address => uint256) public tokenIndex;
+    IERC20[] public tokens;
+    uint256 public tokenCount;
     
     // Tick management
-    mapping(uint256 => OrbitalTypes.OrbitalTick) public ticks;
-    uint256 public nextTickId = 1;
-    uint256[] public activeTickIds;
-    mapping(uint256 => uint256) public tickIdToIndex;
+    Tick[] public ticks;
+    mapping(address => uint256[]) public userTicks; // User -> tick indices
     
-    // State tracking
-    mapping(uint256 => bool) public isInteriorTick;
-    mapping(uint256 => bool) public isBoundaryTick;
-    uint256[] public interiorTickIds;
-    uint256[] public boundaryTickIds;
+    // Global state for efficient computation
+    uint256 public totalInteriorRadiusSquared;  // Sum of r_i^2 for interior ticks
+    uint256 public totalBoundaryRadiusSquared;  // Sum of r_i^2 for boundary ticks
+    uint256 public totalBoundaryConstantSquared; // Sum of c_i^2 for boundary ticks
     
-    // Pool state
-    uint256[] internal _totalReserves;
-    uint256 public totalLiquidity;
+    // Fee parameters
+    uint256 public constant FEE_DENOMINATOR = 10000;
+    uint256 public swapFee = 30; // 0.3% default fee
     
-    // Constants
-    uint256 private constant PRECISION = 1e18;
-    uint256 private constant BASIS_POINTS = 10000;
-    uint256 private constant MAX_TOKENS = 10;
-    uint256 private constant MIN_LIQUIDITY = 1e15; // Minimum liquidity to prevent dust
+    // Factory functionality
+    mapping(bytes32 => address) public pools;
+    address[] public allPools;
     
-    // Events
-    event LiquidityAdded(
-        address indexed provider,
-        uint256 indexed tickId,
-        uint256 radius,
-        uint256 k,
-        uint256[] amounts,
-        uint256 feeBps
-    );
+    // ============ Events ============
     
-    event LiquidityRemoved(
-        address indexed provider,
-        uint256 indexed tickId,
-        uint256[] amounts,
-        uint256[] fees
-    );
-    
+    event PoolCreated(address indexed pool, address[] tokens);
+    event LiquidityAdded(address indexed provider, uint256 tickIndex, uint256 radius);
+    event LiquidityRemoved(address indexed provider, uint256 tickIndex, uint256 amount);
     event Swap(
-        address indexed trader,
-        address indexed tokenIn,
-        address indexed tokenOut,
-        uint256 amountIn,
-        uint256 amountOut,
-        uint256 segments
+        address indexed trader, 
+        uint256 tokenIn, 
+        uint256 tokenOut, 
+        uint256 amountIn, 
+        uint256 amountOut
     );
+    event TickBoundaryCrossed(uint256 tickIndex, bool nowInterior);
     
-    event BoundaryCrossed(
-        uint256 indexed tickId,
-        OrbitalTypes.TickState fromState,
-        OrbitalTypes.TickState toState
-    );
-    
-    event FeesCollected(
-        uint256 indexed tickId,
-        address indexed owner,
-        uint256[] amounts
-    );
+    // ============ Modifiers ============
     
     modifier validTokenIndex(uint256 index) {
         require(index < tokenCount, "Invalid token index");
         _;
     }
     
-    modifier tickExists(uint256 tickId) {
-        require(ticks[tickId].owner != address(0), "Tick does not exist");
+    modifier validTickIndex(uint256 index) {
+        require(index < ticks.length && ticks[index].active, "Invalid tick");
         _;
     }
     
-    constructor(
-        address[] memory _tokens,
-        string[] memory _symbols,
-        address _owner
-    ) Ownable(_owner) {
-        require(_tokens.length >= 2 && _tokens.length <= MAX_TOKENS, "Invalid token count");
-        require(_tokens.length == _symbols.length, "Mismatched arrays");
+    // ============ Constructor ============
+    
+    /**
+     * @notice Initialize pool with token addresses
+     * @param _tokens Array of ERC20 token addresses
+     */
+    constructor(address[] memory _tokens) Ownable(msg.sender) {
+        require(_tokens.length >= 2, "Need at least 2 tokens");
+        require(_tokens.length <= 100, "Too many tokens");
         
         tokenCount = _tokens.length;
-        tokens = _tokens;
-        tokenSymbols = _symbols;
-        _totalReserves = new uint256[](tokenCount);
-        
-        // Setup token indices
         for (uint256 i = 0; i < tokenCount; i++) {
-            require(_tokens[i] != address(0), "Invalid token address");
-            tokenIndex[_tokens[i]] = i;
-        }
-        
-        // Validate no duplicate tokens
-        for (uint256 i = 0; i < tokenCount; i++) {
-            for (uint256 j = i + 1; j < tokenCount; j++) {
-                require(_tokens[i] != _tokens[j], "Duplicate tokens");
-            }
+            tokens.push(IERC20(_tokens[i]));
         }
     }
     
-    /// @notice Add liquidity with specified depeg protection
-    /// @param amounts Token amounts to deposit (or empty for balanced deposit)
-    /// @param capital Total capital if amounts not specified
-    /// @param depegTolerance Minimum acceptable price (e.g., 0.99 = 99%)
-    /// @param feeBps Fee in basis points (e.g., 30 = 0.30%)
-    /// @return result Liquidity addition result
+    // ============ Main Functions ============
+    
+    /**
+     * @notice Add liquidity to the pool
+     * @param amounts Token amounts to deposit
+     * @param planeConstant Tick boundary parameter (concentration level)
+     * @return tickIndex Index of created tick
+     */
     function addLiquidity(
-        uint256[] calldata amounts,
-        uint256 capital,
-        uint256 depegTolerance,
-        uint256 feeBps
-    ) external nonReentrant returns (OrbitalTypes.LiquidityResult memory result) {
-        require(feeBps <= 1000, "Fee too high"); // Max 10%
-        require(depegTolerance >= 0.8e18 && depegTolerance <= PRECISION, "Invalid depeg tolerance");
+        uint256[] memory amounts,
+        uint256 planeConstant
+    ) external nonReentrant returns (uint256 tickIndex) {
+        require(amounts.length == tokenCount, "Invalid amounts length");
         
-        uint256[] memory deposits = new uint256[](tokenCount);
-        uint256[] memory leftovers = new uint256[](tokenCount);
-        uint256 perToken;
-        uint256 radius;
-        
-        // Determine deposits
-        if (amounts.length > 0) {
-            require(amounts.length == tokenCount, "Invalid amounts length");
-            
-            // Find minimum for balanced deposit
-            uint256 minAmount = type(uint256).max;
-            for (uint256 i = 0; i < tokenCount; i++) {
-                require(amounts[i] > 0, "Zero amount");
-                if (amounts[i] < minAmount) minAmount = amounts[i];
-            }
-            
-            perToken = minAmount;
-            for (uint256 i = 0; i < tokenCount; i++) {
-                deposits[i] = perToken;
-                leftovers[i] = amounts[i] - perToken;
-            }
-        } else {
-            require(capital > MIN_LIQUIDITY, "Insufficient capital");
-            perToken = capital / tokenCount;
-            for (uint256 i = 0; i < tokenCount; i++) {
-                deposits[i] = perToken;
-            }
-        }
-        
-        // Calculate radius from balanced deposit
-        // r = a / (1 - 1/√n) where a is per-token deposit
-        // Since sqrt returns integer sqrt, we need to scale properly
-        uint256 sqrtN = OrbitalCoreMath.sqrt(tokenCount * PRECISION);
-        
-        // sqrtN is approximately sqrt(tokenCount) * 1e9
-        // We need to work in 1e18 precision
-        uint256 scaledSqrtN = sqrtN * 1e9; // Convert to 1e18 precision
-        
-        require(scaledSqrtN > PRECISION, "Invalid sqrt result");
-        radius = perToken.mulDiv(scaledSqrtN, scaledSqrtN - PRECISION);
-        
-        // Calculate k from depeg tolerance
-        uint256 k = OrbitalCoreMath.depegPriceToK(depegTolerance, radius, tokenCount);
-        
-        // Validate k bounds
-        (uint256 kMin, uint256 kMax) = OrbitalCoreMath.calculateKBounds(radius, tokenCount);
-        require(k >= kMin && k <= kMax, "Invalid k value");
-        
-        // Transfer tokens
+        // Calculate radius from deposit amounts (geometric approach)
+        uint256 sumSquares = 0;
         for (uint256 i = 0; i < tokenCount; i++) {
-            IERC20(tokens[i]).safeTransferFrom(msg.sender, address(this), deposits[i]);
-            _totalReserves[i] += deposits[i];
+            sumSquares += amounts[i] * amounts[i];
+        }
+        uint256 radius = OrbitalMath.sqrt(sumSquares);
+        require(radius > 0, "Zero liquidity");
+        
+        // Transfer tokens from user
+        for (uint256 i = 0; i < tokenCount; i++) {
+            if (amounts[i] > 0) {
+                tokens[i].transferFrom(msg.sender, address(this), amounts[i]);
+            }
         }
         
-        // Create tick with actual deposited amounts as reserves
-        uint256 tickId = nextTickId++;
-        ticks[tickId] = OrbitalTypes.OrbitalTick({
-            tickId: tickId,
+        // Create new tick
+        Tick memory newTick = Tick({
+            radius: radius,
+            planeConstant: planeConstant,
+            isInterior: true,
+            reserves: amounts,
             owner: msg.sender,
-            k: k,
-            radius: radius,
-            reserves: deposits,  // Use actual deposited amounts
-            liquidity: perToken * tokenCount,
-            state: OrbitalTypes.TickState.INTERIOR,
-            feeBps: feeBps,
-            feesAccrued: new uint256[](tokenCount)
+            active: true
         });
         
-        // Verify sphere constraint with actual reserves
-        require(
-            OrbitalCoreMath.verifySphereConstraint(deposits, radius),
-            "Initial reserves violate sphere constraint"
-        );
+        ticks.push(newTick);
+        tickIndex = ticks.length - 1;
         
-        // Update tracking
-        activeTickIds.push(tickId);
-        tickIdToIndex[tickId] = activeTickIds.length - 1;
-        interiorTickIds.push(tickId);
-        isInteriorTick[tickId] = true;
-        totalLiquidity += ticks[tickId].liquidity;
+        // Update user's tick list
+        userTicks[msg.sender].push(tickIndex);
         
-        // Calculate metrics
-        uint256 xMin = OrbitalCoreMath.calculateXMin(k, radius, tokenCount);
-        uint256 efficiency = OrbitalCoreMath.calculateCapitalEfficiency(k, radius, tokenCount);
+        // Update global state
+        _updateGlobalState();
         
-        // Emit event
-        emit LiquidityAdded(msg.sender, tickId, radius, k, deposits, feeBps);
-        
-        // Return result
-        result = OrbitalTypes.LiquidityResult({
-            tickId: tickId,
-            kValue: k,
-            radius: radius,
-            depegProtection: depegTolerance,
-            capitalEfficiency: efficiency,
-            virtualReserves: xMin,
-            initialReserves: deposits,  // Return actual deposited amounts
-            effectiveDeposit: perToken * tokenCount,
-            leftoverAmounts: leftovers,
-            success: true,
-            message: ""
-        });
+        emit LiquidityAdded(msg.sender, tickIndex, radius);
     }
     
-    /// @notice Remove liquidity and collect fees
-    /// @param tickId Tick to remove
-    /// @return amounts Token amounts returned
-    /// @return fees Accrued fees collected
+    /**
+     * @notice Remove liquidity from a tick
+     * @param tickIndex Index of tick to remove from
+     * @param fraction Fraction to remove (scaled by 1e18)
+     */
     function removeLiquidity(
-        uint256 tickId
-    ) external nonReentrant tickExists(tickId) returns (
-        uint256[] memory amounts,
-        uint256[] memory fees
-    ) {
-        OrbitalTypes.OrbitalTick storage tick = ticks[tickId];
+        uint256 tickIndex,
+        uint256 fraction
+    ) external nonReentrant validTickIndex(tickIndex) returns (uint256[] memory amounts) {
+        require(fraction <= OrbitalMath.PRECISION, "Fraction > 1");
+        
+        Tick storage tick = ticks[tickIndex];
         require(tick.owner == msg.sender, "Not tick owner");
         
         amounts = new uint256[](tokenCount);
-        fees = tick.feesAccrued;
         
-        // Calculate proportional share of reserves
-        uint256 tickLiquidity = tick.liquidity;
-        if (totalLiquidity > 0) {
-            for (uint256 i = 0; i < tokenCount; i++) {
-                amounts[i] = _totalReserves[i].mulDiv(tickLiquidity, totalLiquidity);
-                _totalReserves[i] -= amounts[i];
-            }
-        }
-        
-        // Transfer tokens and fees
+        // Calculate amounts to return
         for (uint256 i = 0; i < tokenCount; i++) {
-            uint256 total = amounts[i] + fees[i];
-            if (total > 0) {
-                IERC20(tokens[i]).safeTransfer(msg.sender, total);
+            amounts[i] = (tick.reserves[i] * fraction) / OrbitalMath.PRECISION;
+            if (amounts[i] > 0) {
+                tokens[i].transfer(msg.sender, amounts[i]);
+                tick.reserves[i] -= amounts[i];
             }
         }
         
-        // Remove tick from tracking
-        _removeTickFromTracking(tickId);
-        totalLiquidity -= tickLiquidity;
+        // Update tick state
+        tick.radius = (tick.radius * (OrbitalMath.PRECISION - fraction)) / 
+                      OrbitalMath.PRECISION;
         
-        // Delete tick
-        delete ticks[tickId];
+        if (tick.radius < 1000) { // Minimum tick size
+            tick.active = false;
+        }
         
-        emit LiquidityRemoved(msg.sender, tickId, amounts, fees);
+        _updateGlobalState();
+        
+        emit LiquidityRemoved(msg.sender, tickIndex, fraction);
     }
     
-    /// @notice Execute swap with boundary crossing detection
-    /// @param tokenIn Input token address
-    /// @param tokenOut Output token address
-    /// @param amountIn Input amount
-    /// @param minAmountOut Minimum output amount
-    /// @param deadline Transaction deadline
-    /// @return result Trade execution result
+    /**
+     * @notice Execute token swap
+     * @param tokenIn Index of token to sell
+     * @param tokenOut Index of token to buy
+     * @param amountIn Amount to sell
+     * @param minAmountOut Minimum amount to receive
+     */
     function swap(
-        address tokenIn,
-        address tokenOut,
+        uint256 tokenIn,
+        uint256 tokenOut,
         uint256 amountIn,
-        uint256 minAmountOut,
-        uint256 deadline
-    ) external nonReentrant returns (OrbitalTypes.TradeResult memory result) {
-        require(block.timestamp <= deadline, "Expired");
+        uint256 minAmountOut
+    ) external nonReentrant 
+      validTokenIndex(tokenIn) 
+      validTokenIndex(tokenOut) 
+      returns (uint256 amountOut) {
+        
         require(tokenIn != tokenOut, "Same token");
         require(amountIn > 0, "Zero input");
         
-        uint256 inputIdx = tokenIndex[tokenIn];
-        uint256 outputIdx = tokenIndex[tokenOut];
-        require(inputIdx < tokenCount && outputIdx < tokenCount, "Invalid token");
+        // Transfer input token
+        tokens[tokenIn].transferFrom(msg.sender, address(this), amountIn);
         
-        // Transfer input tokens
-        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        // Apply fee
+        uint256 amountInAfterFee = (amountIn * (FEE_DENOMINATOR - swapFee)) / FEE_DENOMINATOR;
         
-        // Execute trade with segmentation
-        (uint256 outputAmount, uint256 segments) = _executeTradeWithSegmentation(
-            inputIdx,
-            outputIdx,
-            amountIn
+        // Get current total reserves
+        uint256[] memory totalReserves = _getTotalReserves();
+        
+        // Calculate output amount using invariant
+        amountOut = _calculateSwapOutput(
+            totalReserves,
+            tokenIn,
+            tokenOut,
+            amountInAfterFee
         );
+        amountOut = amountIn;
+
+        // Update reserves and check for tick crossings
+        totalReserves[tokenIn] += amountInAfterFee;
+        totalReserves[tokenOut] -= amountOut;
+        _updateTickReservesWithCrossings(totalReserves);
         
-        require(outputAmount >= minAmountOut, "Insufficient output");
+        // Transfer output token
+        tokens[tokenOut].transfer(msg.sender, amountOut);
         
-        // Transfer output tokens
-        IERC20(tokenOut).safeTransfer(msg.sender, outputAmount);
-        
-        emit Swap(msg.sender, tokenIn, tokenOut, amountIn, outputAmount, segments);
-        
-        result = OrbitalTypes.TradeResult({
-            inputAmountGross: amountIn,
-            inputAmountNet: amountIn, // Will be calculated with fees
-            outputAmount: outputAmount,
-            effectivePrice: outputAmount.mulDiv(PRECISION, amountIn),
-            segments: segments,
-            success: true,
-            message: ""
-        });
+        emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOut);
     }
     
-    /// @notice Execute swap using token indices (INTokenPool interface)
-    /// @param tokenInIndex Index of input token
-    /// @param tokenOutIndex Index of output token
-    /// @param amountIn Input amount
-    /// @param minAmountOut Minimum output amount
-    /// @param recipient Address to receive output tokens
-    /// @return amountOut Actual output amount
-    function swapExactIn(
-        uint8 tokenInIndex,
-        uint8 tokenOutIndex,
-        uint256 amountIn,
-        uint256 minAmountOut,
-        address recipient
-    ) external override nonReentrant returns (uint256 amountOut) {
-        require(tokenInIndex < tokenCount, "Invalid input index");
-        require(tokenOutIndex < tokenCount, "Invalid output index");
-        require(tokenInIndex != tokenOutIndex, "Same token");
-        require(amountIn > 0, "Zero input");
-        require(recipient != address(0), "Invalid recipient");
-        
-        address tokenIn = tokens[tokenInIndex];
-        address tokenOut = tokens[tokenOutIndex];
-        
-        // Transfer input tokens from sender
-        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
-        
-        // Execute trade with segmentation
-        (uint256 outputAmount, ) = _executeTradeWithSegmentation(
-            tokenInIndex,
-            tokenOutIndex,
-            amountIn
-        );
-        
-        require(outputAmount >= minAmountOut, "Insufficient output");
-        
-        // Transfer output tokens to recipient
-        IERC20(tokenOut).safeTransfer(recipient, outputAmount);
-        
-        emit Swap(msg.sender, tokenIn, tokenOut, amountIn, outputAmount, 1);
-        
-        return outputAmount;
-    }
+    // ============ Internal Functions ============
     
-    /// @notice Get quote for swap without executing (INTokenPool interface)
-    /// @param tokenInIndex Index of input token
-    /// @param tokenOutIndex Index of output token
-    /// @param amountIn Input amount
-    /// @return amountOut Expected output amount
-    function getQuote(
-        uint8 tokenInIndex,
-        uint8 tokenOutIndex,
+    /**
+     * @notice Calculate swap output maintaining torus invariant
+     */
+    function _calculateSwapOutput(
+        uint256[] memory reserves,
+        uint256 tokenIn,
+        uint256 tokenOut,
         uint256 amountIn
-    ) external view override returns (uint256 amountOut) {
-        require(tokenInIndex < tokenCount, "Invalid input index");
-        require(tokenOutIndex < tokenCount, "Invalid output index");
-        require(tokenInIndex != tokenOutIndex, "Same token");
-        require(amountIn > 0, "Zero input");
-        
-        // Simplified quote calculation - in production this would simulate the full trade
-        // For now, using a basic approximation based on current reserves
-        uint256 inputReserve = _totalReserves[tokenInIndex];
-        uint256 outputReserve = _totalReserves[tokenOutIndex];
-        
-        if (inputReserve == 0 || outputReserve == 0) {
-            return 0;
-        }
-        
-        // Apply fee (using average fee of 30 bps for quote)
-        uint256 amountInWithFee = amountIn * 9970 / 10000;
-        
-        // Simple constant product formula for quote
-        // In production, this should use the actual orbital math
-        amountOut = (amountInWithFee * outputReserve) / (inputReserve + amountInWithFee);
-    }
-    
-    /// @notice Internal function to execute trade with boundary crossing segmentation
-    function _executeTradeWithSegmentation(
-        uint256 inputIdx,
-        uint256 outputIdx,
-        uint256 totalInput
-    ) internal returns (uint256 totalOutput, uint256 segments) {
-        uint256 remainingInput = totalInput;
-        segments = 0;
-        
-        while (remainingInput > 0 && segments < 10) { // Max 10 segments for safety
-            segments++;
-            
-            // Consolidate current ticks
-            (
-                OrbitalTypes.ConsolidatedTick memory intTick,
-                OrbitalTypes.ConsolidatedTick memory bndTick
-            ) = _consolidateTicks();
-            
-            // Calculate current invariant
-            uint256 currentInvariant = OrbitalCoreMath.calculateTorusInvariant(
-                intTick.reserves,
-                bndTick.reserves,
-                bndTick.radius,
-                tokenCount
-            );
-            
-            // Try full remaining amount
-            (uint256 segmentOutput, bool causesCrossing, uint256 crossingTickId) = 
-                _simulateTrade(inputIdx, outputIdx, remainingInput, currentInvariant);
-            
-            if (!causesCrossing) {
-                // Execute full trade in current configuration
-                _applyTrade(inputIdx, outputIdx, remainingInput, segmentOutput);
-                totalOutput += segmentOutput;
-                remainingInput = 0;
-            } else {
-                // Find crossing point and execute partial trade
-                uint256 crossingAmount = _findCrossingAmount(
-                    inputIdx,
-                    outputIdx,
-                    remainingInput,
-                    crossingTickId,
-                    currentInvariant
-                );
-                
-                if (crossingAmount > 0) {
-                    (uint256 partialOutput,,) = _simulateTrade(
-                        inputIdx,
-                        outputIdx,
-                        crossingAmount,
-                        currentInvariant
-                    );
-                    
-                    _applyTrade(inputIdx, outputIdx, crossingAmount, partialOutput);
-                    totalOutput += partialOutput;
-                    remainingInput -= crossingAmount;
-                    
-                    // Flip tick state
-                    _flipTickState(crossingTickId);
-                }
-            }
-        }
-    }
-    
-    /// @notice Consolidate ticks by state
-    function _consolidateTicks() internal view returns (
-        OrbitalTypes.ConsolidatedTick memory intTick,
-        OrbitalTypes.ConsolidatedTick memory bndTick
-    ) {
-        uint256[] memory intReserves = new uint256[](tokenCount);
-        uint256[] memory bndReserves = new uint256[](tokenCount);
-        uint256 intRadius;
-        uint256 bndRadius;
-        uint256 bndKSum;
-        uint256 bndCount;
-        
-        // Aggregate interior ticks
-        for (uint256 i = 0; i < interiorTickIds.length; i++) {
-            OrbitalTypes.OrbitalTick storage tick = ticks[interiorTickIds[i]];
-            intRadius += tick.radius;
-            for (uint256 j = 0; j < tokenCount; j++) {
-                intReserves[j] += tick.reserves[j];
-            }
-        }
-        
-        // Aggregate boundary ticks
-        for (uint256 i = 0; i < boundaryTickIds.length; i++) {
-            OrbitalTypes.OrbitalTick storage tick = ticks[boundaryTickIds[i]];
-            bndRadius += tick.radius;
-            bndKSum += tick.k;
-            bndCount++;
-            for (uint256 j = 0; j < tokenCount; j++) {
-                bndReserves[j] += tick.reserves[j];
-            }
-        }
-        
-        intTick = OrbitalTypes.ConsolidatedTick({
-            reserves: intReserves,
-            radius: intRadius,
-            isInterior: true,
-            k: 0
-        });
-        
-        bndTick = OrbitalTypes.ConsolidatedTick({
-            reserves: bndReserves,
-            radius: bndRadius,
-            isInterior: false,
-            k: bndCount > 0 ? bndKSum / bndCount : 0
-        });
-    }
-    
-    /// @notice Simulate trade to check for boundary crossing
-    function _simulateTrade(
-        uint256, // inputIdx
-        uint256, // outputIdx
-        uint256 inputAmount,
-        uint256 // targetInvariant
-    ) internal view returns (uint256 outputAmount, bool causesCrossing, uint256 crossingTickId) {
-        // This is a simplified version - full implementation would:
-        // 1. Apply proportional input/output across all ticks
-        // 2. Check each tick's new alpha vs its k value
-        // 3. Use Newton's method to solve for output maintaining invariant
-        
-        // For now, return simplified calculation
-        outputAmount = inputAmount * 95 / 100; // Placeholder
-        causesCrossing = false;
-        crossingTickId = 0;
-    }
-    
-    /// @notice Find the exact amount that causes boundary crossing
-    function _findCrossingAmount(
-        uint256 inputIdx,
-        uint256 outputIdx,
-        uint256 maxAmount,
-        uint256, // crossingTickId
-        uint256 targetInvariant
     ) internal view returns (uint256) {
-        // Binary search for crossing point
-        uint256 low = 0;
-        uint256 high = maxAmount;
-        uint256 tolerance = maxAmount / 1000; // 0.1% tolerance
+        // Get current invariant
+        uint256 currentInvariant = _computeTorusInvariant(reserves);
         
-        while (high - low > tolerance) {
-            uint256 mid = (low + high) / 2;
+        // Binary search for output amount that maintains invariant
+        uint256 low = 0;
+        uint256 high = reserves[tokenOut];
+        uint256 mid;
+        
+        // Use binary search for better accuracy than constant product
+        for (uint256 i = 0; i < 128; i++) {
+            mid = (low + high) / 2;
             
-            (,bool crosses,) = _simulateTrade(inputIdx, outputIdx, mid, targetInvariant);
+            uint256[] memory newReserves = new uint256[](tokenCount);
+            for (uint256 j = 0; j < tokenCount; j++) {
+                newReserves[j] = reserves[j];
+            }
+            newReserves[tokenIn] += amountIn;
+            newReserves[tokenOut] -= mid;
             
-            if (crosses) {
+            uint256 newInvariant = _computeTorusInvariant(newReserves);
+            
+            if (newInvariant > currentInvariant) {
                 high = mid;
             } else {
                 low = mid;
             }
+            
+            if (high - low <= 1) break;
         }
         
         return low;
     }
     
-    /// @notice Apply trade to all ticks proportionally
-    function _applyTrade(
-        uint256 inputIdx,
-        uint256 outputIdx,
-        uint256 inputAmount,
-        uint256 outputAmount
-    ) internal {
-        uint256 totalActiveLiquidity = _getActiveLiquidity();
-        
-        for (uint256 i = 0; i < activeTickIds.length; i++) {
-            uint256 tickId = activeTickIds[i];
-            OrbitalTypes.OrbitalTick storage tick = ticks[tickId];
-            
-            // Calculate tick's proportion
-            uint256 proportion = tick.liquidity.mulDiv(PRECISION, totalActiveLiquidity);
-            
-            // Apply fees
-            uint256 feeAmount = inputAmount.mulDiv(tick.feeBps, BASIS_POINTS);
-            uint256 netInput = inputAmount - feeAmount;
-            
-            // Update reserves
-            uint256 tickInput = netInput.mulDiv(proportion, PRECISION);
-            uint256 tickOutput = outputAmount.mulDiv(proportion, PRECISION);
-            
-            tick.reserves[inputIdx] += tickInput;
-            tick.reserves[outputIdx] -= tickOutput;
-            tick.feesAccrued[inputIdx] += feeAmount.mulDiv(proportion, PRECISION);
+    /**
+     * @notice Compute the torus invariant for given reserves
+     */
+    function _computeTorusInvariant(uint256[] memory reserves) internal view returns (uint256) {
+        uint256 sumSquares = 0;
+        for (uint256 i = 0; i < reserves.length; i++) {
+            sumSquares += reserves[i] * reserves[i];
         }
+        uint256[] memory e = _getEqualPriceVector();
+        uint256 projection = 0;
+        for (uint256 i = 0; i < reserves.length; i++) {
+            projection += (reserves[i] * e[i]) / OrbitalMath.PRECISION;
+        }
+        uint256 projectionSquared = (projection * projection) / OrbitalMath.PRECISION;
         
-        // Update total reserves
-        _totalReserves[inputIdx] += inputAmount;
-        _totalReserves[outputIdx] -= outputAmount;
+        uint256 radiusSum = totalInteriorRadiusSquared + totalBoundaryRadiusSquared;
+        
+        // Torus invariant: (sum(x_i^2) - (R_int^2 + R_bnd^2))^2 + 4*R_bnd^2*(<x,e>^2 - C_bnd^2)
+        uint256 term1 = sumSquares > radiusSum ? sumSquares - radiusSum : 0;
+        uint256 term1Squared = (term1 * term1) / OrbitalMath.PRECISION;
+        
+        uint256 term2 = 4 * totalBoundaryRadiusSquared * 
+                       (projectionSquared > totalBoundaryConstantSquared ? 
+                        projectionSquared - totalBoundaryConstantSquared : 0) / 
+                       OrbitalMath.PRECISION;
+        
+        return term1Squared + term2;
     }
     
-    /// @notice Flip tick between interior and boundary state
-    function _flipTickState(uint256 tickId) internal {
-        OrbitalTypes.OrbitalTick storage tick = ticks[tickId];
+    /**
+     * @notice Update tick reserves and handle boundary crossings
+     */
+    function _updateTickReservesWithCrossings(uint256[] memory newTotalReserves) internal {
+        uint256[] memory e = _getEqualPriceVector();
+        uint256 newProjection = 0;
+        for (uint256 i = 0; i < newTotalReserves.length; i++) {
+            newProjection += (newTotalReserves[i] * e[i]) / OrbitalMath.PRECISION;
+        }
         
-        if (tick.state == OrbitalTypes.TickState.INTERIOR) {
-            // Move to boundary
-            tick.state = OrbitalTypes.TickState.BOUNDARY;
-            _removeFromArray(interiorTickIds, tickId);
-            boundaryTickIds.push(tickId);
-            delete isInteriorTick[tickId];
-            isBoundaryTick[tickId] = true;
+        // Check each tick for boundary crossing
+        for (uint256 i = 0; i < ticks.length; i++) {
+            if (!ticks[i].active) continue;
             
-            emit BoundaryCrossed(tickId, OrbitalTypes.TickState.INTERIOR, OrbitalTypes.TickState.BOUNDARY);
-        } else {
-            // Move to interior
-            tick.state = OrbitalTypes.TickState.INTERIOR;
-            _removeFromArray(boundaryTickIds, tickId);
-            interiorTickIds.push(tickId);
-            delete isBoundaryTick[tickId];
-            isInteriorTick[tickId] = true;
+            Tick storage tick = ticks[i];
+            uint256 normalizedProjection = (newProjection * OrbitalMath.PRECISION) / tick.radius;
+            uint256 normalizedBoundary = (tick.planeConstant * OrbitalMath.PRECISION) / tick.radius;
             
-            emit BoundaryCrossed(tickId, OrbitalTypes.TickState.BOUNDARY, OrbitalTypes.TickState.INTERIOR);
+            bool wasInterior = tick.isInterior;
+            tick.isInterior = normalizedProjection < normalizedBoundary;
+            
+            if (wasInterior != tick.isInterior) {
+                emit TickBoundaryCrossed(i, tick.isInterior);
+            }
         }
-    }
-    
-    /// @notice Get total active liquidity
-    function _getActiveLiquidity() internal view returns (uint256 total) {
-        for (uint256 i = 0; i < activeTickIds.length; i++) {
-            total += ticks[activeTickIds[i]].liquidity;
-        }
-    }
-    
-    /// @notice Remove tick from all tracking arrays
-    function _removeTickFromTracking(uint256 tickId) internal {
-        // Remove from active ticks
-        uint256 index = tickIdToIndex[tickId];
-        uint256 lastIndex = activeTickIds.length - 1;
-        if (index != lastIndex) {
-            uint256 lastTickId = activeTickIds[lastIndex];
-            activeTickIds[index] = lastTickId;
-            tickIdToIndex[lastTickId] = index;
-        }
-        activeTickIds.pop();
-        delete tickIdToIndex[tickId];
         
-        // Remove from state arrays
-        if (isInteriorTick[tickId]) {
-            _removeFromArray(interiorTickIds, tickId);
-            delete isInteriorTick[tickId];
-        } else if (isBoundaryTick[tickId]) {
-            _removeFromArray(boundaryTickIds, tickId);
-            delete isBoundaryTick[tickId];
-        }
+        // Update reserves for all ticks
+        _updateTickReserves(newTotalReserves);
+        _updateGlobalState();
     }
     
-    /// @notice Remove element from array
-    function _removeFromArray(uint256[] storage array, uint256 element) internal {
-        for (uint256 i = 0; i < array.length; i++) {
-            if (array[i] == element) {
-                array[i] = array[array.length - 1];
-                array.pop();
-                break;
+    /**
+     * @notice Update individual tick reserves after trade
+     */
+    function _updateTickReserves(uint256[] memory newTotalReserves) internal {
+        uint256 totalInteriorRadius = 0;
+        
+        // Sum interior tick radii
+        for (uint256 i = 0; i < ticks.length; i++) {
+            if (ticks[i].active && ticks[i].isInterior) {
+                totalInteriorRadius += ticks[i].radius;
+            }
+        }
+        
+        // Update tick reserves
+        for (uint256 i = 0; i < ticks.length; i++) {
+            if (!ticks[i].active) continue;
+            
+            Tick storage tick = ticks[i];
+            
+            if (tick.isInterior && totalInteriorRadius > 0) {
+                // Interior ticks: proportional reserves
+                for (uint256 j = 0; j < tokenCount; j++) {
+                    tick.reserves[j] = (newTotalReserves[j] * tick.radius) / 
+                                      totalInteriorRadius;
+                }
+            } else if (!tick.isInterior) {
+                // Boundary ticks: project to boundary
+                _projectTickToBoundary(tick);
             }
         }
     }
     
-    /// @notice Get pool statistics
-    function getPoolStats() external view returns (OrbitalTypes.PoolStats memory) {
-        return OrbitalTypes.PoolStats({
-            tokenSymbols: tokenSymbols,
-            totalTicks: activeTickIds.length,
-            interiorTicks: interiorTickIds.length,
-            boundaryTicks: boundaryTickIds.length,
-            totalReserves: _totalReserves,
-            totalLiquidity: totalLiquidity
-        });
+    /**
+     * @notice Project tick reserves onto its boundary plane
+     */
+    function _projectTickToBoundary(Tick storage tick) internal {
+        uint256[] memory e = _getEqualPriceVector();
+        uint256 projection = 0;
+        for (uint256 i = 0; i < tick.reserves.length; i++) {
+            projection += (tick.reserves[i] * e[i]) / OrbitalMath.PRECISION;
+        }
+        
+        if (projection != tick.planeConstant) {
+            // Adjust to satisfy plane constraint while maintaining sphere constraint
+            
+            for (uint256 i = 0; i < tokenCount; i++) {
+                tick.reserves[i] = (tick.reserves[i] * tick.planeConstant) / projection;
+            }
+        }
     }
     
-    /// @notice Collect accrued fees for a tick
-    function collectFees(uint256 tickId) external nonReentrant tickExists(tickId) {
-        OrbitalTypes.OrbitalTick storage tick = ticks[tickId];
-        require(tick.owner == msg.sender, "Not tick owner");
-        
-        uint256[] memory fees = tick.feesAccrued;
-        tick.feesAccrued = new uint256[](tokenCount);
+    /**
+     * @notice Get the equal price vector e = (1,1,...,1)/sqrt(n)
+     */
+    function _getEqualPriceVector() internal view returns (uint256[] memory) {
+        uint256[] memory e = new uint256[](tokenCount);
+        uint256 component = OrbitalMath.PRECISION / 
+                           OrbitalMath.sqrt(tokenCount * OrbitalMath.PRECISION);
         
         for (uint256 i = 0; i < tokenCount; i++) {
-            if (fees[i] > 0) {
-                IERC20(tokens[i]).safeTransfer(msg.sender, fees[i]);
+            e[i] = component;
+        }
+        return e;
+    }
+    
+    /**
+     * @notice Get total reserves across all active ticks
+     */
+    function _getTotalReserves() internal view returns (uint256[] memory) {
+        uint256[] memory total = new uint256[](tokenCount);
+        
+        for (uint256 i = 0; i < ticks.length; i++) {
+            if (ticks[i].active) {
+                for (uint256 j = 0; j < tokenCount; j++) {
+                    total[j] += ticks[i].reserves[j];
+                }
             }
         }
         
-        emit FeesCollected(tickId, msg.sender, fees);
+        return total;
     }
     
-    /// @notice Get total reserves (explicit getter to match interface)
-    function totalReserves() external view override returns (uint256[] memory) {
-        return _totalReserves;
+    /**
+     * @notice Update global invariant parameters
+     */
+    function _updateGlobalState() internal {
+        totalInteriorRadiusSquared = 0;
+        totalBoundaryRadiusSquared = 0;
+        totalBoundaryConstantSquared = 0;
+        
+        for (uint256 i = 0; i < ticks.length; i++) {
+            if (!ticks[i].active) continue;
+            
+            Tick storage tick = ticks[i];
+            uint256 radiusSquared = (tick.radius * tick.radius) / 
+                                   OrbitalMath.PRECISION;
+            
+            if (tick.isInterior) {
+                totalInteriorRadiusSquared += radiusSquared;
+            } else {
+                totalBoundaryRadiusSquared += radiusSquared;
+                uint256 constantSquared = (tick.planeConstant * tick.planeConstant) / 
+                                         OrbitalMath.PRECISION;
+                totalBoundaryConstantSquared += constantSquared;
+            }
+        }
+    }
+    
+    // ============ View Functions ============
+    
+    /**
+     * @notice Get spot price between two tokens
+     */
+    function getSpotPrice(uint256 tokenA, uint256 tokenB) 
+        external view 
+        validTokenIndex(tokenA)
+        validTokenIndex(tokenB)
+        returns (uint256) {
+        uint256[] memory reserves = _getTotalReserves();
+        
+        if (reserves[tokenA] == 0) return type(uint256).max;
+        
+        return (reserves[tokenB] * OrbitalMath.PRECISION) / reserves[tokenA];
+    }
+    
+    /**
+     * @notice Get pool reserves for all tokens
+     */
+    function getReserves() external view returns (uint256[] memory) {
+        return _getTotalReserves();
+    }
+    
+    /**
+     * @notice Get capital efficiency for a tick
+     */
+    function getTickEfficiency(uint256 tickIndex) 
+        external view 
+        validTickIndex(tickIndex) 
+        returns (uint256) {
+        Tick storage tick = ticks[tickIndex];
+        uint256 sqrtN = OrbitalMath.sqrt(tokenCount * OrbitalMath.PRECISION);
+        uint256 denominator = tick.radius - (tick.planeConstant * sqrtN) / OrbitalMath.PRECISION;
+        
+        if (denominator <= 0) return OrbitalMath.PRECISION;
+        
+        return (tick.radius * OrbitalMath.PRECISION) / denominator;
+    }
+    
+    /**
+     * @notice Get tick information
+     */
+    function getTickInfo(uint256 tickIndex) 
+        external view 
+        validTickIndex(tickIndex)
+        returns (
+            uint256 radius,
+            uint256 planeConstant,
+            bool isInterior,
+            address owner,
+            uint256[] memory reserves
+        ) {
+        Tick storage tick = ticks[tickIndex];
+        return (
+            tick.radius,
+            tick.planeConstant,
+            tick.isInterior,
+            tick.owner,
+            tick.reserves
+        );
+    }
+    
+    /**
+     * @notice Get user's tick indices
+     */
+    function getUserTicks(address user) external view returns (uint256[] memory) {
+        return userTicks[user];
+    }
+    
+    /**
+     * @notice Calculate output amount for a given input (view function for quotes)
+     */
+    function getAmountOut(
+        uint256 tokenIn,
+        uint256 tokenOut,
+        uint256 amountIn
+    ) external view 
+      validTokenIndex(tokenIn)
+      validTokenIndex(tokenOut)
+      returns (uint256) {
+        require(tokenIn != tokenOut, "Same token");
+        
+        uint256 amountInAfterFee = (amountIn * (FEE_DENOMINATOR - swapFee)) / FEE_DENOMINATOR;
+        uint256[] memory reserves = _getTotalReserves();
+        
+        return _calculateSwapOutput(reserves, tokenIn, tokenOut, amountInAfterFee);
+    }
+    
+    // ============ Admin Functions ============
+    
+    /**
+     * @notice Update swap fee (only owner)
+     */
+    function setSwapFee(uint256 _swapFee) external onlyOwner {
+        require(_swapFee <= 100, "Fee too high"); // Max 1%
+        swapFee = _swapFee;
+    }
+    
+    /**
+     * @notice Emergency withdraw function (only owner)
+     */
+    function emergencyWithdraw(address token, uint256 amount) external onlyOwner {
+        IERC20(token).transfer(msg.sender, amount);
     }
 }
