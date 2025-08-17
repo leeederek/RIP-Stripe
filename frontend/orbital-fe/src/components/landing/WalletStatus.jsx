@@ -26,7 +26,6 @@ const client = createPublicClient({ chain: sepolia, transport: http() });
 export default function WalletStatus({ onSignOut, evmAddress, onContinue }) {
     const { isSignedIn } = useIsSignedIn();
     const addresses = useMemo(() => (Array.isArray(evmAddress) ? evmAddress : evmAddress ? [evmAddress] : []), [evmAddress]);
-    console.log(addresses);
     const [addressToBalances, setAddressToBalances] = useState({});
     const [tokenMetaMap, setTokenMetaMap] = useState({}); // address -> { symbol, decimals }
     const [selectedTokenKey, setSelectedTokenKey] = useState(null);
