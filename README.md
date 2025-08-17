@@ -1,9 +1,7 @@
 # RIPStripe: A cheaper and trustless Stripe alternative for stablecoin payments
-Pay in one stablecoin, but the merchant/recipient receives payments in their preferred token at a fraction (10x less) than Stripe's stablecoin payments.
-
-Under the hood, all swaps are handled instantly on-chain using a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital) that offers high capital efficiency (via concentrated liquidity) and low slippage. RIPStripe uses the previously abandoned `HTTP 402: Payment Required` response type for programmatic payments and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps to/from a single liquidity pool. 
-
 RIPStripe is on-chain financial infrastructure for merchants to accept [GENIUS Act](https://www.congress.gov/bill/119th-congress/senate-bill/394/text) Compliant stablecoin payments: instantly and globally for 10x less compared to Stripe (0.15% vs. [Stripe's 1.5% fee for stablecoin payments](https://stripe.com/pricing#payments)). 
+
+Pay in one stablecoin on any network and the merchant/recipient receives funds in their preferred token, on their preferred network. Under the hood, all swaps are handled instantly on-chain using a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital) that offers high capital efficiency (via concentrated liquidity) and low slippage. RIPStripe uses the previously abandoned `HTTP 402: Payment Required` response type for programmatic payments and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps to/from a single liquidity pool. 
 
 ## User Flow:
 <img width="1392" height="967" alt="Screenshot 2025-08-16 at 6 37 57 PM" src="https://github.com/user-attachments/assets/0b52479c-276a-4f21-8af9-c2f7fd5baa71" />
