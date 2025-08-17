@@ -155,11 +155,12 @@ function useVerificationFlow(steps) {
     return { statuses, isRunning, run, reset, results };
 }
 
-export default function Verify({ tokenKey, getArticle }) {
+export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
     const settle = useSettleFetch();
     const stepSimulateTransaction = useCallback(async () => {
         await wait(2000);
         await getArticle();
+        setDoesHaveAccess(true);
         return {
             merchantRef: 'CONF-12345',
             status: 'pending',
@@ -167,6 +168,7 @@ export default function Verify({ tokenKey, getArticle }) {
     }, [getArticle]);
 
     const stepSettle = useCallback(async () => {
+        await wait(2000);
         // const res = await settle({
         //     value: 1,
         //     network: 'base-sepolia', // 'base' or 'base-sepolia'

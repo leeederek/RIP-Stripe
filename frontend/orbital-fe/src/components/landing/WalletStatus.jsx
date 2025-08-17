@@ -50,7 +50,7 @@ const getNetworkTagStyle = (network) => {
 };
 
 
-export default function WalletStatus({ onSignOut, evmAddress, onContinue }) {
+export default function WalletStatus({ onSignOut, evmAddress, onContinue, setDoesHaveAccess }) {
     const { isSignedIn } = useIsSignedIn();
     const address = useMemo(() => (typeof evmAddress === 'string' ? evmAddress : null), [evmAddress]);
     const [addressToBalances, setAddressToBalances] = useState({});

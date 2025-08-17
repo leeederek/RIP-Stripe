@@ -7,7 +7,7 @@ import Verify from './landing/Verify';
 // Removed Swap and Liquidity views for checkout-focused widget
 import { useIsSignedIn, useSignOut, useEvmAddress } from '@coinbase/cdp-hooks';
 
-export default function Widget({ getArticle }) {
+export default function Widget({ getArticle, setDoesHaveAccess }) {
   const { isSignedIn } = useIsSignedIn();
   const { signOut } = useSignOut();
   const { evmAddress } = useEvmAddress();
@@ -104,6 +104,7 @@ export default function Widget({ getArticle }) {
                   evmAddress={evmAddress}
                   onContinue={(tokenKey) => { setSelectedTokenKey(tokenKey); goToSigned(1); }}
                   getArticle={getArticle}
+                  setDoesHaveAccess={setDoesHaveAccess}
                 />
               </div>
               <div
@@ -115,7 +116,7 @@ export default function Widget({ getArticle }) {
                   overflowY: signedPageIndex === 1 ? undefined : 'auto',
                 }}
               >
-                <Verify tokenKey={selectedTokenKey} getArticle={getArticle} />
+                <Verify tokenKey={selectedTokenKey} getArticle={getArticle} setDoesHaveAccess={setDoesHaveAccess} />
               </div>
             </div>
           </div>
