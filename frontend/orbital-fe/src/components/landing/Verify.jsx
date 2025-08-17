@@ -12,7 +12,7 @@ export const CUSTOM_PYUSD_ADDRESS = "0x20180e82dB7Ac476A9F3b0aF245338288c88D0Ef"
 export const CUSTOM_USDE_ADDRESS = "0x3f06895671C3a55cB84e1Cc221a9917755a985D6"
 
 
-const SWAP_CONTRACT = '0xBAB68589Ca860B06F839D7Ab41F7d81A7ae5f470';
+const SWAP_CONTRACT = '0x68ecD5616Af65B1354541f94c8546502Db843233';
 const ETH_SEPOLIA_CHAIN_ID = 11155111;
 const BASE_SEPOLIA_CHAIN_ID = 84532;
 const sepoliaClient = createPublicClient({ chain: sepolia, transport: http() });
@@ -251,7 +251,7 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
             const data = encodeFunctionData({
                 abi,
                 functionName: 'swap',
-                args: [1, 0, 100000n, 80000n],
+                args: [1, 0, 1000000n, 800000n],
             });
             // // Provide minimal gas hints to help estimators on empty value txs
             // const fees = await sepoliaClient.estimateFeesPerGas().catch(() => ({ maxFeePerGas: undefined, maxPriorityFeePerGas: undefined }));
