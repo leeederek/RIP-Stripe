@@ -1048,5 +1048,5 @@ class premium_data:
 
 
 class secret_data:
-    KEYID = "30a54c94-f553-499c-b40e-16edab0126cf"
-    SECRET = "yzJu3My4xbDJT5AyjkOabWAJtM2npuOvO0omCrTONA0kCMQwGCbICoSebtZg8aH+wn0eTEdC58dfLvJ5J0FSXg=="
+    KEYID = "51f1b515-fef7-41de-8cd8-8e974457f1af"
+    SECRET = "XQ8ETdbBpwzzw5qb+t/gZWR57mSKKDQTB663KdFuDD1GutUubuxfK1alj4eaapGzHjNJMryn2NONA0DAxqYbTg=="

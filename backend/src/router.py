@@ -85,7 +85,7 @@ def get_access_token():
         JwtOptions(
             api_key_id=secret_data.KEYID,
             api_key_secret=secret_data.SECRET,
-            request_method="GET",
+            request_method="POST",
             request_host="api.cdp.coinbase.com",
             request_path="/platform/v2/evm/token-balances/base-sepolia/0x8fddcc0c5c993a1968b46787919cc34577d6dc5c",
             expires_in=900,  # optional (defaults to 120 seconds)
