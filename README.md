@@ -6,7 +6,7 @@ Under the hood, all swaps are handled instantly on-chain using a new type of AMM
 *Kyma (κῦμα), the Greek word for "wave", symbolizes the powerful wave of transformation that stablecoins are bringing to global finance.”*
 
 ## User Flow:
-<img width="1511" height="995" alt="Screenshot 2025-08-17 at 12 12 19 AM" src="https://github.com/user-attachments/assets/5062f785-f93d-4226-89c8-2caa06301b66" />
+<img width="1511" height="995" alt="Screenshot 2025-08-17 at 12 12 19 AM" src="https://github.com/user-attachments/assets/4f99f426-0fa4-40ea-9796-0043d3fa9115" />
 
 
 * :white_check_mark: Merchants choose the stablecoin they wish to receive & get access to GENIUS Act Compliant, borderless, and instant payments infrastructure for 10x cheaper without needing to know/use the blockchain directly.

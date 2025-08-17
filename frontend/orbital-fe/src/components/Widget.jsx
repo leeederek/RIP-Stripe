@@ -66,7 +66,7 @@ export default function Widget({ getArticle, setDoesHaveAccess }) {
               <div className="stack" style={{ textAlign: 'right' }}>
                 <div className="label">Total</div>
                 <div className="row" style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                  <div style={{ fontWeight: 700, fontSize: 18 }}>1 PYUSD</div>
+                  <div style={{ fontWeight: 700, fontSize: 18 }}>1 USDC</div>
                   <span
                     className="tag"
                     style={{ ...getNetworkTagStyle('Base Sepolia'), fontSize: 11, padding: '2px 6px', lineHeight: 1.2 }}
@@ -188,7 +188,7 @@ function PaymentMethodStep({ method, setMethod, onConnect, onCreate }) {
       <div className="stack">
         <div className="kicker">Payment method</div>
         <h2 style={{ margin: 0 }}>Choose how you'd like to pay</h2>
-        <p className="muted" style={{ marginTop: 6 }}>Select an option below, then sign in or create a wallet to pay 1 PYUSD and unlock the article.</p>
+        <p className="muted" style={{ marginTop: 6 }}>Select an option below, then sign in or create a wallet to pay 1 USDC and unlock the article.</p>
       </div>
 
       <div className="row" style={{ gap: 12 }}>
@@ -235,17 +235,17 @@ function PaymentMethodStep({ method, setMethod, onConnect, onCreate }) {
 
       <div className="row" style={{ marginTop: 4 }}>
         <button className="btn-primary" style={{ flex: 1 }} onClick={onConnect}>
-          Sign in to pay 1 PYUSD
+          Sign in to pay 1 USDC
         </button>
         <button className="btn" style={{ flex: 1 }} onClick={onCreate}>
-          Create wallet to pay 1 PYUSD
+          Create wallet to pay 1 USDC
         </button>
       </div>
 
       <div className="card">
         <div className="label">Summary</div>
         <div className="stack" style={{ marginTop: 8 }}>
-          <div className="helper">• Total due: 1 PYUSD</div>
+          <div className="helper">• Total due: 1 USDC</div>
           <div className="helper">• Paying with: {method === 'coinbase' ? 'Coinbase (email)' : method === 'privy' ? 'Privy (email)' : 'Hardware wallet'}</div>
           <div className="helper">• Secure on-chain checkout; access unlocks immediately after payment</div>
         </div>

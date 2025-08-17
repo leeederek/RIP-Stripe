@@ -13,6 +13,7 @@ from x402.encoding import safe_base64_decode
 import json
 
 router = fastapi.APIRouter()
+has_been_verified = False
 
 
 @router.get("/")
@@ -30,12 +31,14 @@ async def get_resource(resource_id: int, request: Request):
         accepts=[payment_requirements],
     ).model_dump(by_alias=True)
 
-    # Return the merchant PaymentRequirement.
-    return JSONResponse(
-        status_code=402,
-        content=error_data,
-        headers={"Content-Type": "application/json"},
-    )
+    if not has_been_verified:
+        # Return the merchant PaymentRequirement.
+        return JSONResponse(
+            status_code=402,
+            content=error_data,
+            headers={"Content-Type": "application/json"},
+        )
+    return premium_data.DATA
 
 
 @router.get("/verify")
@@ -54,24 +57,24 @@ async def verify(request: Request):
     payment_requirements = PaymentRequirements(
         scheme="exact",
         network="base-sepolia",
-        max_amount_required="10",
+        max_amount_required="1000",
         resource="https://api.cdp.coinbase.com/platform/v2/x402/settle",
         description="Premium API access for data analysis",
         mime_type="application/json",
         output_schema={"data": "string"},
         pay_to="0x74051bf72a90014a515c511fECFe9811dE138235",
         max_timeout_seconds=300,
-        asset="0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        asset="0x50766571B3769d9CfC170f3b17668F3673F80EbA",
         extra={
             "name": "USDC",
-            "version": "2",
+            "version": "1",
             "gasLimit": "1000000",
-        }
+        },
     )
     facilitator_config: FacilitatorConfig = {"url": merchant_configs.FACILITATOR_URL}
     facilitator = FacilitatorClient(facilitator_config)
     verify_response = await facilitator.verify(decoded_payment, payment_requirements)
-    print("verify res:", verify_response)
+    print("Result of verification:", verify_response)
     if not verify_response.is_valid:
         return JSONResponse(
             status_code=402,
@@ -79,7 +82,7 @@ async def verify(request: Request):
             headers=headers,
         )
 
-    # Settle the payment
+    # Settle the payment with retry logic
     settle_url = "https://api.cdp.coinbase.com/platform/v2/x402/settle"
     access_token = make_access_token("POST")
     jwt_token = access_token
@@ -92,20 +95,58 @@ async def verify(request: Request):
         "paymentPayload": decoded_payment.model_dump(by_alias=True),
         "paymentRequirements": payment_requirements.model_dump(by_alias=True),
     }
-    # response = requests.post(
-    #     url=settle_url,
-    #     json=payload,
-    #     headers=headers,
-    # )
-    response = requests.post(
-        url=settle_url,
-        json=payload,
-        headers=headers,
-    )
-    print("settle res:", response.text)
 
-    # Successful payment returns web content.
-    return premium_data.DATA
+    # Retry loop for settlement
+    max_retries = 5
+    retry_count = 0
+    response = None
+
+    while retry_count < max_retries:
+        try:
+            response = requests.post(
+                url=settle_url,
+                json=payload,
+                headers=headers,
+            )
+            response_data = response.json()
+            print(f"Attempt {retry_count + 1}: {response_data}")
+
+            # Check if settlement was successful
+            if response_data.get("success", False):
+                print("Settlement successful!")
+                break
+            else:
+                print(
+                    f"Settlement failed: {response_data.get('message', 'Unknown error')}"
+                )
+                retry_count += 1
+
+                if retry_count < max_retries:
+                    print(
+                        f"Retrying in 2 seconds... (Attempt {retry_count + 1}/{max_retries})"
+                    )
+                    import time
+
+                    time.sleep(2)
+                else:
+                    print("Max retries reached. Settlement failed.")
+
+        except Exception as e:
+            print(f"Error during settlement attempt {retry_count + 1}: {e}")
+            retry_count += 1
+
+            if retry_count < max_retries:
+                print(
+                    f"Retrying in 2 seconds... (Attempt {retry_count + 1}/{max_retries})"
+                )
+                import time
+
+                time.sleep(2)
+            else:
+                print("Max retries reached due to errors.")
+
+    print("Final settle result:", response.json() if response else "No response")
+    has_been_verified = True
 
 
 @router.get("/price/{stablecoin}")
@@ -149,71 +190,3 @@ def make_access_token(request):
 @router.get("/access-token")
 def get_access_token():
     return make_access_token("POST")
-
-
-@router.post("/settle")
-async def settle_txn(request: Request):
-    # request_payload = await request.json()
-    # decoded_payment = PaymentPayload(**request_payload["paymentPayload"])
-    url = "https://api.cdp.coinbase.com/platform/v2/x402/settle"
-
-    # Create PaymentRequirements object from configs
-    payment_requirements = PaymentRequirements(
-        scheme="exact",
-        network="base-sepolia",
-        max_amount_required="1000000000000000000",
-        resource="https://api.cdp.coinbase.com/platform/v2/x402/settle",
-        description="Premium API access for data analysis",
-        mime_type="application/json",
-        output_schema={"data": "string"},
-        pay_to="0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-        max_timeout_seconds=300,
-        asset="0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    )
-
-    payload = {
-        "x402Version": 1,
-        "paymentPayload": {
-            "x402Version": 1,
-            "scheme": "exact",
-            "network": "base-sepolia",
-            "payload": {
-                "signature": "0xf3746613c2d920b5fdabc0856f2aeb2d4f88ee6037b8cc5d04a71a4462f13480",
-                "authorization": {
-                    "from": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-                    "to": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-                    "value": "1000000000000000000",
-                    "validAfter": "1716150000",
-                    "validBefore": "1716150000",
-                    "nonce": "0x1234567890abcdef1234567890abcdef12345678",
-                },
-            },
-        },
-        "paymentRequirements": {
-            "scheme": "exact",
-            "network": "base-sepolia",
-            "maxAmountRequired": "1000000000000000000",
-            "resource": "https://api.cdp.coinbase.com/platform/v2/x402/settle",
-            "description": "Premium API access for data analysis",
-            "mimeType": "application/json",
-            "outputSchema": {"data": "string"},
-            "payTo": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-            "maxTimeoutSeconds": 300,
-            "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-            # "extra": {"gasLimit": "1000000"},p
-        },
-    }
-    access_token = make_access_token("POST")
-
-    jwt_token = access_token
-    headers = {
-        "Authorization": f"Bearer {jwt_token}",
-        "Content-Type": "application/json",
-    }
-    response = requests.post(
-        url=url,
-        json=payload,
-        headers=headers,
-    )
-    print(response.text)
-    return payload
