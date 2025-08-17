@@ -18,18 +18,18 @@ export default function Swap({ wallet }) {
       <div className="card stack">
         <div className="label">Swap from</div>
         <div className="token-row">
-          <TokenSelect value={from} onChange={setFrom} include={["USDC","USDT","DAI","PYUSD","USDe","FRAX"]} />
+          <TokenSelect value={from} onChange={setFrom} include={["USDC", "USDT", "DAI", "PYUSD", "USDe", "FRAX"]} />
           <input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </div>
         <div className="divider" />
         <div className="label">To</div>
         <div className="token-row">
-          <TokenSelect value={to} onChange={setTo} include={["USDC","USDT","DAI","PYUSD","USDe","FRAX"]} />
+          <TokenSelect value={to} onChange={setTo} include={["USDC", "USDT", "DAI", "PYUSD", "USDe", "FRAX"]} />
           <input className="input" value={((Number(amount) || 0) * 0.999).toFixed(2)} readOnly />
         </div>
         <div className="actions" style={{ marginTop: 10 }}>
           <span className="helper">Rate: 1 {from} ≈ 1 {to} (mock)</span>
-          <button className="btn btn-primary" onClick={handleSwap}>Initiate swap</button>
+          <button className="btn-primary" onClick={handleSwap}>Initiate swap</button>
         </div>
       </div>
     </div>

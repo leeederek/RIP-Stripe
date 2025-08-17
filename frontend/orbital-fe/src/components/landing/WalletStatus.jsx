@@ -166,7 +166,7 @@ export default function WalletStatus({ onSignOut, evmAddress, onContinue }) {
                     </div>
                     {selectedTokenKey && (
                         <div className="row" style={{ justifyContent: 'flex-end', marginTop: 6 }}>
-                            <button className="btn btn-primary" onClick={() => onContinue?.(selectedTokenKey)}>
+                            <button className="btn-primary" onClick={() => onContinue?.(selectedTokenKey)}>
                                 Continue with {(() => { const sel = TOKENS.find(t => t.key === selectedTokenKey); const sym = sel && tokenMetaMap[sel.address]?.symbol; return sym || selectedTokenKey?.toUpperCase(); })()}
                             </button>
                         </div>

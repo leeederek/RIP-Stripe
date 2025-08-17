@@ -218,7 +218,7 @@ function PaymentMethodStep({ method, setMethod, onConnect, onCreate }) {
       </div>
 
       <div className="row" style={{ marginTop: 4 }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={onConnect}>
+        <button className="btn-primary" style={{ flex: 1 }} onClick={onConnect}>
           Sign in to pay 1 PYUSD
         </button>
         <button className="btn" style={{ flex: 1 }} onClick={onCreate}>

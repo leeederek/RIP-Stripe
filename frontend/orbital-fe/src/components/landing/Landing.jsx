@@ -91,7 +91,7 @@ function SignedOutLanding({ onConnect, onOpenCreate, method, setMethod }) {
       </div>
 
       <div className="row" style={{ marginTop: 4 }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onConnect('connect')}>
+        <button className="btn-primary" style={{ flex: 1 }} onClick={() => onConnect('connect')}>
           Sign in to pay 1 PYUSD
         </button>
         <button className="btn" style={{ flex: 1 }} onClick={onOpenCreate}>
