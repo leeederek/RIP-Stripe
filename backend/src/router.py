@@ -1,11 +1,12 @@
 import fastapi
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from src.configs import merchant_configs, premium_data
+from src.configs import merchant_configs, premium_data, secret_data
 from src.services import oracle, merchant
 from src import models
 from x402.types import x402PaymentRequiredResponse, PaymentPayload
 from x402.facilitator import FacilitatorClient, FacilitatorConfig
+from cdp.auth.utils.jwt import generate_jwt, JwtOptions
 
 router = fastapi.APIRouter()
 
@@ -75,3 +76,19 @@ async def risk_score(stablecoin: str):
 async def swap(data: models.BasicModel):
     # Return SwapResponse
     returned_data = merchant.swap_currencies()
+
+
+@router.get("/access-token")
+def get_access_token():
+    # Generate the JWT using the CDP SDK
+    jwt_token = generate_jwt(
+        JwtOptions(
+            api_key_id=secret_data.KEYID,
+            api_key_secret=secret_data.SECRET,
+            request_method="GET",
+            request_host="api.cdp.coinbase.com",
+            request_path="/platform/v2/evm/token-balances/base-sepolia/0x8fddcc0c5c993a1968b46787919cc34577d6dc5c",
+            expires_in=900,  # optional (defaults to 120 seconds)
+        )
+    )
+    return {"access_token": jwt_token}

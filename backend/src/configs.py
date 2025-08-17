@@ -1045,3 +1045,8 @@ class genius_configs:
 
 class premium_data:
     DATA = {"title": "THIS IS PREMIUM DATA"}
+
+
+class secret_data:
+    KEYID = "30a54c94-f553-499c-b40e-16edab0126cf"
+    SECRET = "yzJu3My4xbDJT5AyjkOabWAJtM2npuOvO0omCrTONA0kCMQwGCbICoSebtZg8aH+wn0eTEdC58dfLvJ5J0FSXg=="
