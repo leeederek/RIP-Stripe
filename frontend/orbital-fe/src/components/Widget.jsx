@@ -5,12 +5,11 @@ import CreateWalletStep from './landing/CreateWalletStep';
 import WalletStatus from './landing/WalletStatus';
 import Verify from './landing/Verify';
 // Removed Swap and Liquidity views for checkout-focused widget
-import { useIsSignedIn, useSignOut, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
+import { useIsSignedIn, useSignOut, useEvmAddress } from '@coinbase/cdp-hooks';
 
-export default function Widget() {
+export default function Widget({ getArticle }) {
   const { isSignedIn } = useIsSignedIn();
   const { signOut } = useSignOut();
-  const { currentUser } = useCurrentUser();
   const { evmAddress } = useEvmAddress();
 
   // placeholder for future connect flow
@@ -22,6 +21,13 @@ export default function Widget() {
   const [signedPageIndex, setSignedPageIndex] = useState(0);
   const [signedSlidesOpacity, setSignedSlidesOpacity] = useState(1);
   const [selectedTokenKey, setSelectedTokenKey] = useState(null);
+
+  const getNetworkTagStyle = (network) => {
+    if (network === 'Base Sepolia') {
+      return { backgroundColor: '#DBEAFE', color: '#0B3B8A', fontWeight: 600 };
+    }
+    return { backgroundColor: '#E9D5FF', color: '#4C1D95', fontWeight: 600 };
+  };
   const goToSigned = (idx) => {
     setSignedSlidesOpacity(0.6);
     requestAnimationFrame(() => {
@@ -59,7 +65,15 @@ export default function Widget() {
               </div>
               <div className="stack" style={{ textAlign: 'right' }}>
                 <div className="label">Total</div>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>1 PYUSD</div>
+                <div className="row" style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 18 }}>1 PYUSD</div>
+                  <span
+                    className="tag"
+                    style={{ ...getNetworkTagStyle('Base Sepolia'), fontSize: 11, padding: '2px 6px', lineHeight: 1.2 }}
+                  >
+                    Base Sepolia
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -87,8 +101,9 @@ export default function Widget() {
               >
                 <WalletStatus
                   onSignOut={signOut}
-                  evmAddress={currentUser?.evmAccounts || evmAddress}
+                  evmAddress={evmAddress}
                   onContinue={(tokenKey) => { setSelectedTokenKey(tokenKey); goToSigned(1); }}
+                  getArticle={getArticle}
                 />
               </div>
               <div
@@ -100,7 +115,7 @@ export default function Widget() {
                   overflowY: signedPageIndex === 1 ? undefined : 'auto',
                 }}
               >
-                <Verify tokenKey={selectedTokenKey} />
+                <Verify tokenKey={selectedTokenKey} getArticle={getArticle} />
               </div>
             </div>
           </div>

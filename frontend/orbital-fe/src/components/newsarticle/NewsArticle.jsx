@@ -1,9 +1,53 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Widget from '../Widget';
+import Article from './Article';
 
 export default function NewsArticle() {
+    const getArticle = React.useCallback(async () => {
+        const response = await fetch('http://localhost:8000/get-resource/123', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+        });
+        return response;
+    }, []);
+
+    const [doesHaveAccess, setDoesHaveAccess] = useState(false);
+    const [article, setArticle] = useState(null);
+
+    useEffect(() => {
+        async function getDoesHaveAccessData() {
+            // You can await here
+            const response = await getArticle();
+            setDoesHaveAccess(response.status === 200 ? true : false);
+            if (response.status === 200) {
+                // parse article
+            }
+        }
+        getDoesHaveAccessData();
+    }, [setDoesHaveAccess, getArticle]);
+
+
     return (
         <div style={styles.page}>
+            {!doesHaveAccess ? (
+                <div style={styles.overlay}>
+                    <div style={styles.overlayScrim} />
+                    <div style={styles.overlayCenter}>
+                        <Widget getArticle={getArticle} />
+                    </div>
+                </div>
+            ) : <Article
+                title="Crypto markets steady as L2 activity grows"
+                description="Layer-2 ecosystems continue to expand with rising developer activity."
+                author="Orbital Newsroom"
+                date="Today"
+                texts={[
+                    "Paragraph one...",
+                    "Paragraph two...",
+                    "Paragraph three..."
+                ]}
+            />
+            }
             {/* Background newsletter content */}
             <div style={styles.newsContainer} aria-hidden={true}>
                 <header style={styles.header}>
@@ -78,13 +122,7 @@ export default function NewsArticle() {
                 </main>
             </div>
 
-            {/* Blur overlay and widget */}
-            <div style={styles.overlay}>
-                <div style={styles.overlayScrim} />
-                <div style={styles.overlayCenter}>
-                    <Widget />
-                </div>
-            </div>
+
         </div>
     );
 }
