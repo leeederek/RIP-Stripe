@@ -64,7 +64,7 @@ async def verify(request: Request):
         output_schema={"data": "string"},
         pay_to="0x74051bf72a90014a515c511fECFe9811dE138235",
         max_timeout_seconds=300,
-        asset="0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        asset="0x50766571B3769d9CfC170f3b17668F3673F80EbA",
         extra={
             "name": "USDC",
             "version": "1",

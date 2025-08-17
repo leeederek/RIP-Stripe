@@ -11,6 +11,7 @@ const LINK_SEPOLIA_ADDRESS = '0xCD85B9a767eF2277E264A4B9A14a2deACAB82FfB';
 // Base Sepolia token addresses
 // USDC source: Circle developers documentation (Base Sepolia)
 export const USDC_BASE_SEPOLIA_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+export const USDT_BASE_SEPOLIA_ADDRESS = '0x863aE464D7E8e6F95b845FD3AF0f9A2B2034D6dD';
 // PYUSD is not officially deployed on Base Sepolia as of now
 export const PYUSD_BASE_SEPOLIA_ADDRESS = null;
 // LINK ERC-20 is not officially listed on Base Sepolia as of now
@@ -19,7 +20,6 @@ export const LINK_BASE_SEPOLIA_ADDRESS = null;
 const TOKENS = [
     { key: 'pyusd', address: PYUSD_SEPOLIA_ADDRESS, network: "Sepolia" },
     { key: 'usdc', address: USDC_SEPOLIA_ADDRESS, network: "Sepolia" },
-    { key: 'link', address: LINK_SEPOLIA_ADDRESS, network: "Sepolia" },
 ];
 
 const BASE_SEPOLIA_TOKENS = [

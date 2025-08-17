@@ -18,13 +18,14 @@ export default function NewsArticle() {
         async function getDoesHaveAccessData() {
             // You can await here
             const response = await getArticle();
-            setDoesHaveAccess(response.status === 200 ? true : false);
             if (response.status === 200) {
-                // parse article
+                const json = await response.json();
+                console.log("json", json);
+                setArticle(json);
             }
         }
-        getDoesHaveAccessData();
-    }, [setDoesHaveAccess, getArticle]);
+        doesHaveAccess && getDoesHaveAccessData();
+    }, [setDoesHaveAccess, getArticle, doesHaveAccess]);
 
 
     return (

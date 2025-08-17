@@ -83,17 +83,30 @@ function useSettleFetch() {
     }) {
         if (!payTo) throw new Error('payTo is required');
         if (!asset) throw new Error('asset is required');
+
+        function generateBytes32Nonce() {
+            if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+                const bytes = new Uint8Array(32);
+                crypto.getRandomValues(bytes);
+                return '0x' + Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+            }
+            // Fallback: deterministic padded hex from time (not cryptographically secure)
+            const hex = Date.now().toString(16);
+            return '0x' + hex.padStart(64, '0');
+        }
+        const nonce = generateBytes32Nonce();
+
         const nowSeconds = Math.floor(Date.now() / 1000);
         const validAfter = nowSeconds;
         const validBefore = nowSeconds + 600;
-        const nonceHex = generateBytes32Nonce();
+        console.log("nonce", nonce);
         const now = Math.floor(Date.now() / 1000);
 
 
         const typedData = {
             domain: {
                 name: 'USDC',        // match token
-                version: '2',        // match token
+                version: '1',        // match token
                 chainId,             // e.g., 84532 for Base Sepolia
                 verifyingContract: asset, // ERC-20 contract address (must match `asset`)
             },
@@ -120,7 +133,7 @@ function useSettleFetch() {
                 value: '10',          // base units (e.g., 1 USDC = "1000000")
                 validAfter: String(now),
                 validBefore: String(now + 600),
-                nonce: nonceHex,           // 32-byte hex
+                nonce: nonce,           // 32-byte hex
             },
         };
 
@@ -147,7 +160,7 @@ function useSettleFetch() {
                     value: '10',
                     validAfter: String(now),
                     validBefore: String(now + 600),
-                    nonce: nonceHex,
+                    nonce: nonce,
                 },
             },
         });
@@ -238,9 +251,8 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
             const data = encodeFunctionData({
                 abi,
                 functionName: 'swap',
-                args: [1, 0, 1000n, 800n],
+                args: [1, 0, 100000n, 80000n],
             });
-
             // // Provide minimal gas hints to help estimators on empty value txs
             // const fees = await sepoliaClient.estimateFeesPerGas().catch(() => ({ maxFeePerGas: undefined, maxPriorityFeePerGas: undefined }));
             const result = await sendEvmTransaction({
@@ -258,6 +270,7 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
                 network: "base-sepolia",
             });
             console.log("Broadcasted Tx Hash:", result.transactionHash);
+            return result;
         } catch (error) {
             console.error("Failed to send transaction:", error);
         }
@@ -270,20 +283,25 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
             headers: { 'Accept': 'application/json' },
         });
         const json = await accessToken.json();
-        const res = await settle({
-            accessToken: json.access_token,
-            value: '1',
-            network: 'base-sepolia', // 'base' or 'base-sepolia'
-            chainId: 84532, // 8453 (Base), 84532 (Base Sepolia)
-            resource: 'http://localhost:8000/get-resource/123',
-            description: 'Purcahse of article',
-            mimeType: 'application/json',
-            payTo: MERCHANT_ADDRESS,
-            asset: USDC_BASE_SEPOLIA_ADDRESS,
-            extra: {
-                gasLimit: "1000000"
-            }
-        });
+        try {
+            const res = await settle({
+                accessToken: json.access_token,
+                value: '1',
+                network: 'base-sepolia', // 'base' or 'base-sepolia'
+                chainId: 84532, // 8453 (Base), 84532 (Base Sepolia)
+                resource: 'http://localhost:8000/get-resource/123',
+                description: 'Purcahse of article',
+                mimeType: 'application/json',
+                payTo: MERCHANT_ADDRESS,
+                asset: USDC_BASE_SEPOLIA_ADDRESS,
+                extra: {
+                    gasLimit: "1000000"
+                }
+            });
+        } catch (error) {
+            console.error("Failed to settle:", error);
+        }
+        setDoesHaveAccess(true);
         return;
     }, [settle]);
 
@@ -296,9 +314,7 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
             run: handleSwap,
             render: (data) => (
                 <div className="stack" style={{ gap: 4 }}>
-                    <div className="helper">Route: {data?.route}</div>
-                    <div className="helper">In: {data?.amountIn}</div>
-                    <div className="helper">Expected out: {data?.expectedOut}</div>
+                    <div className="helper">Tx hash: {data.transactionHash}</div>
                 </div>
             ),
         },
