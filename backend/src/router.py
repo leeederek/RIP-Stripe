@@ -57,7 +57,7 @@ async def verify(request: Request):
     payment_requirements = PaymentRequirements(
         scheme="exact",
         network="base-sepolia",
-        max_amount_required="10",
+        max_amount_required="1000",
         resource="https://api.cdp.coinbase.com/platform/v2/x402/settle",
         description="Premium API access for data analysis",
         mime_type="application/json",
