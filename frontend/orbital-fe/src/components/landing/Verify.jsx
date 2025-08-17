@@ -115,7 +115,7 @@ function useSettleFetch() {
             message: {
                 from: evmAddress,
                 to: payTo,                 // must equal paymentRequirements.payTo
-                value: '1000000',          // base units (e.g., 1 USDC = "1000000")
+                value: '1',          // base units (e.g., 1 USDC = "1000000")
                 validAfter: String(now),
                 validBefore: String(now + 600),
                 nonce: nonceHex,           // 32-byte hex
@@ -142,7 +142,7 @@ function useSettleFetch() {
                 authorization: {
                     from: evmAddress,
                     to: payTo,
-                    value: '1000000',
+                    value: '1',
                     validAfter: String(now),
                     validBefore: String(now + 600),
                     nonce: nonceHex,
@@ -270,7 +270,7 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
         const json = await accessToken.json();
         const res = await settle({
             accessToken: json.access_token,
-            value: '10000',
+            value: '1',
             network: 'base-sepolia', // 'base' or 'base-sepolia'
             chainId: 84532, // 8453 (Base), 84532 (Base Sepolia)
             resource: 'http://localhost:8000/get-resource/123',
