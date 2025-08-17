@@ -23,7 +23,7 @@ async def get_resource(resource_id: int, request: Request):
     error_data = x402PaymentRequiredResponse(
         x402_version=1,
         error=str("Payment required"),
-        accepts=payment_requirements,
+        accepts=[payment_requirements],
     ).model_dump(by_alias=True)
 
     return JSONResponse(
@@ -35,15 +35,12 @@ async def get_resource(resource_id: int, request: Request):
 
 @router.post("/verify/")
 async def verify(request: Request):
-    # decoded_payment_dict = decode_payment()
     json_dict = await request.json()
-    # # decoded_payment_dict["x402Version"] = x402_VERSION
     decoded_payment = PaymentPayload(**json_dict["paymentPayload"])
-    # print(decoded_payment)
     FACILITATOR_URL = "https://x402.org/facilitator"
-    NETWORK = "base-sepolia"
+    # NETWORK = "base-sepolia"
 
-    # Initialize facilitator client
+    # Facilitator to check payment confirmation
     facilitator_config: FacilitatorConfig = {"url": FACILITATOR_URL}
     facilitator = FacilitatorClient(facilitator_config)
     verify_response = await facilitator.verify(
@@ -55,6 +52,8 @@ async def verify(request: Request):
             content=verify_response.model_dump(),
             headers={"Content-Type": "application/json"},
         )
+    # Successful payment returns web content.
+    return {"TITLE": "THIS IS A WEB ARTICLE"}
 
 
 @router.get("/price/{stablecoin}")
