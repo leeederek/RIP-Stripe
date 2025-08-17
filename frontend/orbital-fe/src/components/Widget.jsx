@@ -76,14 +76,30 @@ export default function Widget() {
                 opacity: signedSlidesOpacity,
               }}
             >
-              <div style={{ width: '50%', boxSizing: 'border-box', paddingRight: 0 }}>
+              <div
+                style={{
+                  width: '50%',
+                  boxSizing: 'border-box',
+                  paddingRight: 0,
+                  maxHeight: signedPageIndex === 0 ? undefined : 450,
+                  overflowY: signedPageIndex === 0 ? undefined : 'auto',
+                }}
+              >
                 <WalletStatus
                   onSignOut={signOut}
                   evmAddress={currentUser?.evmAccounts || evmAddress}
                   onContinue={(tokenKey) => { setSelectedTokenKey(tokenKey); goToSigned(1); }}
                 />
               </div>
-              <div style={{ width: '50%', boxSizing: 'border-box', paddingLeft: 0 }}>
+              <div
+                style={{
+                  width: '50%',
+                  boxSizing: 'border-box',
+                  paddingLeft: 0,
+                  maxHeight: signedPageIndex === 1 ? undefined : 450,
+                  overflowY: signedPageIndex === 1 ? undefined : 'auto',
+                }}
+              >
                 <Verify tokenKey={selectedTokenKey} />
               </div>
             </div>
@@ -99,7 +115,15 @@ export default function Widget() {
                 opacity: slidesOpacity,
               }}
             >
-              <div style={{ width: '50%', boxSizing: 'border-box', paddingRight: 0 }}>
+              <div
+                style={{
+                  width: '50%',
+                  boxSizing: 'border-box',
+                  paddingRight: 0,
+                  maxHeight: pageIndex === 0 ? undefined : 450,
+                  overflowY: pageIndex === 0 ? undefined : 'auto',
+                }}
+              >
                 <PaymentMethodStep
                   method={method}
                   setMethod={setMethod}
@@ -107,7 +131,15 @@ export default function Widget() {
                   onCreate={() => goTo(1)}
                 />
               </div>
-              <div style={{ width: '50%', boxSizing: 'border-box', paddingLeft: 0 }}>
+              <div
+                style={{
+                  width: '50%',
+                  boxSizing: 'border-box',
+                  paddingLeft: 0,
+                  maxHeight: pageIndex === 1 ? undefined : 450,
+                  overflowY: pageIndex === 1 ? undefined : 'auto',
+                }}
+              >
                 <CreateWalletStep
                   method={method}
                   onBack={() => goTo(0)}
@@ -121,6 +153,11 @@ export default function Widget() {
       <div className="footer-cta" style={{ justifyContent: isSignedIn ? 'space-between' : 'flex-end' }}>
         {isSignedIn ? (
           <>
+            <div className="row">
+              {signedPageIndex > 0 ? (
+                <button className="btn" onClick={() => goToSigned(Math.max(0, signedPageIndex - 1))}>Back</button>
+              ) : null}
+            </div>
             <button className="btn" onClick={signOut}>Sign out</button>
           </>
         ) : null}
