@@ -1,0 +1,267 @@
+{
+    "stablecoins": [
+        {
+            "name": "USDC",
+            "report_metadata": {
+                "report_id": "USDC-2025-07",
+                "issuer": {
+                    "name": "Circle Internet Financial",
+                    "credit_rating": "AA+"
+                },
+                "reporting_period": {
+                    "start": "2025-07-01",
+                    "end": "2025-07-31",
+                    "submission_date": "2025-08-05"
+                }
+            },
+            "issuance": {
+                "total_tokens_issued": 68180000000,
+                "wallet_distribution": {
+                    "top_10_wallets": 18,
+                    "exchanges": 35,
+                    "retail": 47
+                },
+                "volatility": {
+                    "30d_rolling_stddev_vs_peg": 0.0012,
+                    "volume_volatility": 0.32
+                }
+            },
+            "reserves": {
+                "total_usd": 70225400000,
+                "asset_type": "Cash + Treasuries",
+                "custodians": [
+                    "Bank of New York Mellon",
+                    "BlackRock"
+                ],
+                "reserve_amount_usd": 70225400000,
+                "reserve_percent_of_total": 103,
+                "reserve_distribution": {
+                    "cash": 80,
+                    "treasuries": 19,
+                    "other": 1
+                }
+            },
+            "risk_liquidity": {
+                "daily_liquidity_ratio_percent": 75,
+                "stress_tests": {
+                    "10pct": "Pass",
+                    "30pct": "Pass",
+                    "50pct": "Pass"
+                },
+                "redemption_speed_days": 2
+            },
+            "compliance": {
+                "aml_kyc_new_customers": 12500,
+                "aml_kyc_sars_filed": 12,
+                "txn_monitoring_flagged": 157,
+                "txn_monitoring_escalations": 18
+            },
+            "audit": {
+                "status": "Completed",
+                "auditor_name": "Deloitte",
+                "opinion": "Unqualified"
+            },
+            "governance": {
+                "board_meetings_count": 2,
+                "board_meetings_decisions": "Increased short-term T-Bill allocation"
+            }
+        },
+        {
+            "name": "USDT",
+            "report_metadata": {
+                "report_id": "USDT-2025-07",
+                "issuer": {
+                    "name": "Tether Holdings",
+                    "credit_rating": "BBB+"
+                },
+                "reporting_period": {
+                    "start": "2025-07-01",
+                    "end": "2025-07-31",
+                    "submission_date": "2025-08-05"
+                }
+            },
+            "issuance": {
+                "total_tokens_issued": 167840000000,
+                "wallet_distribution": {
+                    "top_10_wallets": 22,
+                    "exchanges": 40,
+                    "retail": 38
+                },
+                "volatility": {
+                    "30d_rolling_stddev_vs_peg": 0.0049,
+                    "volume_volatility": 0.45
+                }
+            },
+            "reserves": {
+                "total_usd": 216513600000,
+                "asset_type": "Cash, Treasuries, secured loans",
+                "custodians": [
+                    "Various banks & partners"
+                ],
+                "reserve_amount_usd": 216513600000,
+                "reserve_percent_of_total": 129,
+                "reserve_distribution": {
+                    "cash": 40,
+                    "treasuries": 60,
+                    "other": 0
+                }
+            },
+            "risk_liquidity": {
+                "daily_liquidity_ratio_percent": 68,
+                "stress_tests": {
+                    "10pct": "Pass",
+                    "30pct": "Pass",
+                    "50pct": "At risk"
+                },
+                "redemption_speed_days": 9
+            },
+            "compliance": {
+                "aml_kyc_new_customers": 8500,
+                "aml_kyc_sars_filed": 25,
+                "txn_monitoring_flagged": 310,
+                "txn_monitoring_escalations": 33
+            },
+            "audit": {
+                "status": "Ongoing",
+                "auditor_name": "BDO Italia",
+                "opinion": "Pending"
+            },
+            "governance": {
+                "board_meetings_count": 1,
+                "board_meetings_decisions": "Adjusted commercial paper exposure"
+            }
+        },
+        {
+            "name": "PYUSD",
+            "report_metadata": {
+                "report_id": "PYUSD-2025-07",
+                "issuer": {
+                    "name": "PayPal / Paxos Trust",
+                    "credit_rating": "AAA"
+                },
+                "reporting_period": {
+                    "start": "2025-07-01",
+                    "end": "2025-07-31",
+                    "submission_date": "2025-08-05"
+                }
+            },
+            "issuance": {
+                "total_tokens_issued": 1190000000,
+                "wallet_distribution": {
+                    "top_10_wallets": 15,
+                    "exchanges": 28,
+                    "retail": 57
+                },
+                "volatility": {
+                    "30d_rolling_stddev_vs_peg": 0.0011,
+                    "volume_volatility": 0.39
+                }
+            },
+            "reserves": {
+                "total_usd": 1190000000,
+                "asset_type": "Cash + Treasuries",
+                "custodians": [
+                    "State Street",
+                    "US Treasuries"
+                ],
+                "reserve_amount_usd": 1190000000,
+                "reserve_percent_of_total": 100,
+                "reserve_distribution": {
+                    "cash": 68,
+                    "treasuries": 27,
+                    "other": 5
+                }
+            },
+            "risk_liquidity": {
+                "daily_liquidity_ratio_percent": 80,
+                "stress_tests": {
+                    "10pct": "Pass",
+                    "30pct": "Pass",
+                    "50pct": "Pass"
+                },
+                "redemption_speed_days": 1
+            },
+            "compliance": {
+                "aml_kyc_new_customers": 2500,
+                "aml_kyc_sars_filed": 2,
+                "txn_monitoring_flagged": 40,
+                "txn_monitoring_escalations": 3
+            },
+            "audit": {
+                "status": "Completed",
+                "auditor_name": "Grant Thornton",
+                "opinion": "Unqualified"
+            },
+            "governance": {
+                "board_meetings_count": 1,
+                "board_meetings_decisions": "No material changes"
+            }
+        },
+        {
+            "name": "USDe",
+            "report_metadata": {
+                "report_id": "USDe-2025-07",
+                "issuer": {
+                    "name": "Ethena Labs",
+                    "credit_rating": "AA-"
+                },
+                "reporting_period": {
+                    "start": "2025-07-01",
+                    "end": "2025-07-31",
+                    "submission_date": "2025-08-05"
+                }
+            },
+            "issuance": {
+                "total_tokens_issued": 11270000000,
+                "wallet_distribution": {
+                    "top_10_wallets": 30,
+                    "exchanges": 42,
+                    "retail": 28
+                },
+                "volatility": {
+                    "30d_rolling_stddev_vs_peg": 0.0095,
+                    "volume_volatility": 0.67
+                }
+            },
+            "reserves": {
+                "total_usd": 11270000000,
+                "asset_type": "Delta-hedged synthetic + USDC reserves",
+                "custodians": [
+                    "Binance Custody",
+                    "Coinbase Custody"
+                ],
+                "reserve_amount_usd": 11270000000,
+                "reserve_percent_of_total": 100,
+                "reserve_distribution": {
+                    "cash": 49,
+                    "treasuries": 50,
+                    "other": 1
+                }
+            },
+            "risk_liquidity": {
+                "daily_liquidity_ratio_percent": 55,
+                "stress_tests": {
+                    "10pct": "Pass",
+                    "30pct": "At risk",
+                    "50pct": "Fail"
+                },
+                "redemption_speed_days": 4
+            },
+            "compliance": {
+                "aml_kyc_new_customers": 6200,
+                "aml_kyc_sars_filed": 8,
+                "txn_monitoring_flagged": 92,
+                "txn_monitoring_escalations": 11
+            },
+            "audit": {
+                "status": "Pending",
+                "auditor_name": "Third-party TBD",
+                "opinion": "Pending"
+            },
+            "governance": {
+                "board_meetings_count": 1,
+                "board_meetings_decisions": "Exploring new reserve allocation"
+            }
+        }
+    ]
+}

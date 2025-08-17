@@ -80,7 +80,7 @@ export default function Liquidity({ wallet }) {
 
       <div className="actions">
         <span className="helper">You will be providing liquidity for: {selected.join(', ') || 'None'}</span>
-        <button className="btn btn-primary" onClick={submit}>Create position</button>
+        <button className="btn-primary" onClick={submit}>Create position</button>
       </div>
     </div>
   );

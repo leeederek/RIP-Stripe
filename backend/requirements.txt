@@ -3,3 +3,5 @@ pydantic
 pymongo
 uvicorn
 web3
+x402
+cdp-sdk
