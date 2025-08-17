@@ -1,3 +1,23 @@
+from x402.chains import (
+    get_chain_id,
+    get_token_decimals,
+    get_token_name,
+    get_token_version,
+    get_default_token_address,
+)
+from x402.types import (
+    PaymentPayload,
+    PaymentRequirements,
+    Price,
+    SupportedNetworks,
+    TokenAmount,
+    TokenAsset,
+    EIP712Domain,
+    x402PaymentRequiredResponse,
+    SettleResponse,
+)
+
+
 class flare_configs:
     """
     Configuration for Flare network interactions.
@@ -979,6 +999,42 @@ class merchant_configs:
     MERCHANT_TO_CURRENCY_MAP = {
         "NYTIMES": ["USDC", "USDT", "DAI", "PYUSD", "USDe", "FRAX"],
     }
+
+    price = TokenAmount(
+        amount="1000",
+        asset=TokenAsset(
+            address="0x036CbD53842c5426634e7929541eC2318f3dCF7e",  # USDC on Base Sepolia
+            decimals=6,
+            eip712=EIP712Domain(name="USDC", version="2"),
+        ),
+    )
+
+    network = "base-sepolia"
+    resource = "url"  # url
+    description = "Access to weather data (Custom Token)"
+    # Get USDC address for the network
+    chain_id = get_chain_id(network)
+    asset_address = price.asset.address
+
+    # Get EIP-712 domain info
+    eip712_domain = {
+        "name": get_token_name(chain_id, asset_address),
+        "version": get_token_version(chain_id, asset_address),
+    }
+
+    PAYMENT_REQUIREMENT = PaymentRequirements(
+        scheme="exact",
+        network=network,
+        max_amount_required=price.amount,
+        resource=resource,
+        description=description,
+        mime_type="application/json",
+        pay_to=str(0x0),  # need wallet
+        max_timeout_seconds=60,
+        asset=asset_address,
+        output_schema=None,
+        extra=eip712_domain,
+    )
 
 
 class genius_configs:
