@@ -97,7 +97,7 @@ async def verify(request: Request):
     }
 
     # Retry loop for settlement
-    max_retries = 10
+    max_retries = 5
     retry_count = 0
     response = None
 
