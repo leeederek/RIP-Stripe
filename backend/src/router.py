@@ -42,12 +42,8 @@ async def get_resource(resource_id: int, request: Request):
 async def verify(request: Request):
     payment_header = request.headers.get("X-PAYMENT", "")
     payment_obj = safe_base64_decode(payment_header)
-    # request_payload = safe_base64_decode(str(request))
-    # print(request_payload)
     decoded_payment = PaymentPayload(**json.loads(payment_obj))
-
     access_token = make_access_token("GET")
-
     jwt_token = access_token
     headers = {
         "Authorization": f"Bearer {jwt_token}",
@@ -77,6 +73,26 @@ async def verify(request: Request):
             content=verify_response.model_dump(),
             headers=headers,
         )
+
+    # Settle the payment
+    settle_url = "https://api.cdp.coinbase.com/platform/v2/x402/settle"
+    access_token = make_access_token("POST")
+    jwt_token = access_token
+    headers = {
+        "Authorization": f"Bearer {jwt_token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "paymentPayload": decoded_payment.model_dump(),
+        "paymentRequirements": payment_requirements.model_dump(),
+    }
+    response = requests.post(
+        url=settle_url,
+        json=payload,
+        headers=headers,
+    )
+    print(response)
+
     # Successful payment returns web content.
     return premium_data.DATA
 
