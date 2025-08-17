@@ -45,7 +45,6 @@ code {
   display: grid;
   place-items: center;
   padding: 40px 20px;
-  overflow: hidden;
 }
 
 .widget {

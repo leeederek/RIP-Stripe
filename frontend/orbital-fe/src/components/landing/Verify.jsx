@@ -1,11 +1,37 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useEvmAddress, useGetAccessToken, useSignEvmTransaction } from '@coinbase/cdp-hooks';
-import { PYUSD_BASE_SEPOLIA_ADDRESS } from './WalletStatus';
+import { PYUSD_SEPOLIA_ADDRESS, USDC_BASE_SEPOLIA_ADDRESS, USDC_SEPOLIA_ADDRESS } from './WalletStatus';
+import { sendEvmTransaction, signEvmTypedData } from '@coinbase/cdp-core';
+import { createPublicClient, decodeErrorResult, encodeFunctionData, erc20Abi, http } from 'viem';
+import { sepolia } from 'viem/chains';
+
+
+const CUSTOM_USDC_ADDRESS = "0xa1DBc4F41540a2aA338e9aD2F5058deF509E1b95"
+const CUSTOM_USDT_ADDRESS = "0xC01def8bD0C4C9790199ABa304C944Be9491FCc3"
+const CUSTOM_PYUSD_ADDRESS = "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9"
+
+
+const SWAP_CONTRACT = '0xBAB68589Ca860B06F839D7Ab41F7d81A7ae5f470';
+const ETH_SEPOLIA_CHAIN_ID = 11155111;
+const sepoliaClient = createPublicClient({ chain: sepolia, transport: http() });
+
 
 // Removed unused chain/token constants and viem helpers
 
 // Shared helpers and flow primitives
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Generate a 32-byte nonce as 0x-prefixed hex (bytes32)
+function generateBytes32Nonce() {
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        const bytes = new Uint8Array(32);
+        crypto.getRandomValues(bytes);
+        return '0x' + Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+    }
+    // Fallback: deterministic padded hex from time (not cryptographically secure)
+    const hex = Date.now().toString(16);
+    return '0x' + hex.padStart(64, '0');
+}
 
 // Individual step executors (replace bodies with real endpoint logic later)
 async function stepInitialize() {
@@ -38,83 +64,93 @@ const MERCHANT_ADDRESS = '0x74051bf72a90014a515c511fECFe9811dE138235';
 function useSettleFetch() {
     const { evmAddress } = useEvmAddress();
     const { signEvmTransaction } = useSignEvmTransaction();
-    const { getAccessToken } = useGetAccessToken();
 
     return async function settle({
+        accessToken,
         value,
-        network = 'base', // 'base' or 'base-sepolia'
+        network = 'base-sepolia', // 'base' or 'base-sepolia'
         chainId = 84532, // 8453 (Base), 84532 (Base Sepolia)
         resource = 'https://api.example.com/premium/resource/123',
         description = 'Premium API access for data analysis',
         mimeType = 'application/json',
         payTo,
         asset,
-        maxAmountRequired = '0',
+        maxAmountRequired,
         maxTimeoutSeconds = 10,
         extra = {},
     }) {
-        const accessToken = await getAccessToken();
-        console.log("accessToken", accessToken);
+        if (!payTo) throw new Error('payTo is required');
+        if (!asset) throw new Error('asset is required');
         const nowSeconds = Math.floor(Date.now() / 1000);
-        const validAfter = String(nowSeconds);
-        const validBefore = String(nowSeconds + 600);
-        const nonceHex = '0x' + Date.now().toString(16);
+        const validAfter = nowSeconds;
+        const validBefore = nowSeconds + 600;
+        const nonceHex = generateBytes32Nonce();
+        const now = Math.floor(Date.now() / 1000);
 
-        // Prepare a minimal EIP-1559 transaction to sign
-        const txToSign = {
-            to: payTo,
-            value,
-            chainId,
-            type: 'eip1559',
+
+        const typedData = {
+            domain: {
+                name: 'USDC',        // match token
+                version: '2',        // match token
+                chainId,             // e.g., 84532 for Base Sepolia
+                verifyingContract: asset, // ERC-20 contract address (must match `asset`)
+            },
+            types: {
+                EIP712Domain: [
+                    { name: 'name', type: 'string' },
+                    { name: 'version', type: 'string' },
+                    { name: 'chainId', type: 'uint256' },
+                    { name: 'verifyingContract', type: 'address' },
+                ],
+                TransferWithAuthorization: [
+                    { name: 'from', type: 'address' },
+                    { name: 'to', type: 'address' },
+                    { name: 'value', type: 'uint256' },
+                    { name: 'validAfter', type: 'uint256' },
+                    { name: 'validBefore', type: 'uint256' },
+                    { name: 'nonce', type: 'bytes32' },
+                ],
+            },
+            primaryType: 'TransferWithAuthorization',
+            message: {
+                from: evmAddress,
+                to: payTo,                 // must equal paymentRequirements.payTo
+                value: '1000000',          // base units (e.g., 1 USDC = "1000000")
+                validAfter: String(now),
+                validBefore: String(now + 600),
+                nonce: nonceHex,           // 32-byte hex
+            },
         };
 
-        const signed = await signEvmTransaction({
-            evmAccount: evmAddress,
-            transaction: txToSign,
-        });
+        // 2) Sign typed data
+        const { signature } = await signEvmTypedData({ evmAccount: evmAddress, typedData });
 
-        const signatureHex = signed?.signedTransaction ?? signed; // hook may return object or raw hex
+        // 3) Build X-PAYMENT header value (base64-encoded JSON)
+        function toBase64Json(obj) {
+            const json = JSON.stringify(obj);
+            return typeof window !== 'undefined' && window.btoa
+                ? window.btoa(unescape(encodeURIComponent(json)))
+                : Buffer.from(json, 'utf-8').toString('base64');
+        }
 
-        const body = {
+        const xPaymentHeader = toBase64Json({
             x402Version: 1,
-            paymentPayload: {
-                x402Version: 1,
-                scheme: 'exact',
-                network,
-                payload: {
-                    signature: signatureHex,
-                    authorization: {
-                        from: evmAddress,
-                        to: payTo,
-                        value: String(value),
-                        validAfter,
-                        validBefore,
-                        nonce: nonceHex,
-                    },
+            scheme: 'exact',
+            network,
+            payload: {
+                signature,
+                authorization: {
+                    from: evmAddress,
+                    to: payTo,
+                    value: '1000000',
+                    validAfter: String(now),
+                    validBefore: String(now + 600),
+                    nonce: nonceHex,
                 },
             },
-            paymentRequirements: {
-                scheme: 'exact',
-                network,
-                maxAmountRequired,
-                resource,
-                description,
-                mimeType,
-                outputSchema: { data: 'string' },
-                payTo,
-                maxTimeoutSeconds,
-                asset,
-                extra,
-            },
-        };
-
-        const res = await fetch('https://api.cdp.coinbase.com/platform/v2/x402/settle', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
+        });
+        const res = await fetch('http://localhost:8000/verify', {
+            headers: { 'X-PAYMENT': xPaymentHeader, 'Accept': 'application/json' },
         });
 
         if (!res.ok) {
@@ -157,6 +193,7 @@ function useVerificationFlow(steps) {
 
 export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
     const settle = useSettleFetch();
+    const { evmAddress } = useEvmAddress();
     const stepSimulateTransaction = useCallback(async () => {
         await wait(2000);
         await getArticle();
@@ -167,19 +204,85 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
         };
     }, [getArticle]);
 
+    const handleSwap = async () => {
+        if (!evmAddress) return;
+
+        try {
+            const approveData = encodeFunctionData({
+                abi: erc20Abi,
+                functionName: 'approve',
+                args: [SWAP_CONTRACT, 100000000000000000000n], // or a higher allowance
+            });
+            const approveTx = await sendEvmTransaction({
+                evmAccount: evmAddress,
+                network: 'ethereum-sepolia',
+                transaction: { to: CUSTOM_PYUSD_ADDRESS, data: approveData, gas: 120000n, chainId: ETH_SEPOLIA_CHAIN_ID, type: 'eip1559' },
+            });
+            console.log('approve tx hash:', approveTx.transactionHash);
+
+            const abi = [{
+                name: 'swap',
+                type: 'function',
+                stateMutability: 'payable',
+                inputs: [
+                    { name: 'tokenIn', type: 'uint256' },
+                    { name: 'tokenOut', type: 'uint256' },
+                    { name: 'amountIn', type: 'uint256' },
+                    { name: 'minAmountOut', type: 'uint256' },
+                ],
+                outputs: [],
+            }];
+
+            const data = encodeFunctionData({
+                abi,
+                functionName: 'swap',
+                args: [2, 0, 1000n, 800n],
+            });
+
+            // Provide minimal gas hints to help estimators on empty value txs
+            const fees = await sepoliaClient.estimateFeesPerGas().catch(() => ({ maxFeePerGas: undefined, maxPriorityFeePerGas: undefined }));
+            const result = await sendEvmTransaction({
+                evmAccount: evmAddress,
+                transaction: {
+                    to: SWAP_CONTRACT,
+                    data,
+                    chainId: ETH_SEPOLIA_CHAIN_ID,
+                    type: "eip1559",
+                    // let backend pick nonce; provide only gas limit hint
+                    gas: 1200000n,
+                    // maxFeePerGas: fees.maxFeePerGas,
+                    // maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+                },
+                network: "ethereum-sepolia",
+            });
+            console.log("Broadcasted Tx Hash:", result.transactionHash);
+        } catch (error) {
+            console.error("Failed to send transaction:", error);
+        }
+    };
+
     const stepSettle = useCallback(async () => {
-        await wait(2000);
-        // const res = await settle({
-        //     value: 1,
-        //     network: 'base-sepolia', // 'base' or 'base-sepolia'
-        //     chainId: 84532, // 8453 (Base), 84532 (Base Sepolia)
-        //     resource: 'http://localhost:8000/get-resource/123',
-        //     description: 'Purcahse of article',
-        //     mimeType: 'application/json',
-        //     payTo: MERCHANT_ADDRESS,
-        //     asset: PYUSD_BASE_SEPOLIA_ADDRESS,
-        // });
-        // console.log("res", res);
+        // await wait(2000);
+        const accessToken = await fetch("http://localhost:8000/access-token", {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+        });
+        const json = await accessToken.json();
+        const res = await settle({
+            accessToken: json.access_token,
+            value: '10000',
+            network: 'base-sepolia', // 'base' or 'base-sepolia'
+            chainId: 84532, // 8453 (Base), 84532 (Base Sepolia)
+            resource: 'http://localhost:8000/get-resource/123',
+            description: 'Purcahse of article',
+            mimeType: 'application/json',
+            payTo: MERCHANT_ADDRESS,
+            asset: USDC_BASE_SEPOLIA_ADDRESS,
+            extra: {
+                gasLimit: "1000000"
+            }
+        });
+        console.log("res", res);
         return;
     }, [settle]);
 
@@ -189,7 +292,7 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
             key: 'swap',
             title: 'Swap',
             description: 'Swapping your original currency to the merchant\'s currency',
-            run: stepInitialize,
+            run: handleSwap,
             render: (data) => (
                 <div className="stack" style={{ gap: 4 }}>
                     <div className="helper">Route: {data?.route}</div>
@@ -276,78 +379,6 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
     //     }
     // };
 
-    // const handleSend = async () => {
-    //     if (!evmAddress) return;
-    //     const abi = [{
-    //         name: 'swap',
-    //         type: 'function',
-    //         stateMutability: 'payable',
-    //         inputs: [
-    //             { name: 'tokenIn', type: 'address' },
-    //             { name: 'tokenOut', type: 'address' },
-    //             { name: 'amountIn', type: 'uint256' },
-    //             { name: 'minAmountOut', type: 'uint256' },
-    //         ],
-    //         outputs: [],
-    //     }];
-
-    //     const data = encodeFunctionData({
-    //         abi,
-    //         functionName: 'swap',
-    //         args: [PYUSD, USDC, 1000n, 800n],
-    //     });
-
-    //     try {
-
-    //         const approveData = encodeFunctionData({
-    //             abi: erc20Abi,
-    //             functionName: 'approve',
-    //             args: [SWAP_CONTRACT, 100000000000000000000n], // or a higher allowance
-    //         });
-    //         const approveTx = await sendEvmTransaction({
-    //             evmAccount: evmAddress,
-    //             network: 'ethereum-sepolia',
-    //             transaction: { to: PYUSD, data: approveData, gas: 120000n, chainId: ETH_SEPOLIA_CHAIN_ID, type: 'eip1559' },
-    //         });
-    //         console.log('approve tx hash:', approveTx.transactionHash);
-
-    //         // simulate
-    //         try {
-    //             await client.simulateContract({
-    //                 address: SWAP_CONTRACT,
-    //                 abi, // pay/swap/addLiquidity ABI
-    //                 functionName: 'swap', // or 'swap'/'addLiquidity'
-    //                 args: [PYUSD, USDC, 1000n, 800n],
-    //                 account: evmAddress,
-    //                 value: 0n,
-    //             });
-    //         } catch (err) {
-    //             console.log(err.shortMessage);
-    //             if (err.data) {
-    //                 try { console.log(decodeErrorResult({ abi, data: err.data })); } catch { }
-    //             }
-    //         }
-    //         // Provide minimal gas hints to help estimators on empty value txs
-    //         const fees = await client.estimateFeesPerGas().catch(() => ({ maxFeePerGas: undefined, maxPriorityFeePerGas: undefined }));
-    //         const result = await sendEvmTransaction({
-    //             evmAccount: evmAddress,
-    //             transaction: {
-    //                 to: SWAP_CONTRACT,
-    //                 data,
-    //                 chainId: ETH_SEPOLIA_CHAIN_ID,
-    //                 type: "eip1559",
-    //                 // let backend pick nonce; provide only gas limit hint
-    //                 gas: 1200000n,
-    //                 // maxFeePerGas: fees.maxFeePerGas,
-    //                 // maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
-    //             },
-    //             network: "ethereum-sepolia",
-    //         });
-    //         console.log("Broadcasted Tx Hash:", result.transactionHash);
-    //     } catch (error) {
-    //         console.error("Failed to send transaction:", error);
-    //     }
-    // };
 
     // // New: test-only addLiquidity button
     // const handleAddLiquidity = async () => {

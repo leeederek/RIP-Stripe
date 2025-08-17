@@ -13,7 +13,7 @@ server.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],        # Allowed origins
     allow_credentials=True,       # Allow cookies/auth headers
-    allow_methods=[""],          # Allow all HTTP methods (GET, POST, etc.)
+    allow_methods=["*"],          # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],          # Allow all headers
 )
 

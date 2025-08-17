@@ -3,9 +3,9 @@ import { useIsSignedIn } from '@coinbase/cdp-hooks';
 import { createPublicClient, http, formatEther, formatUnits } from 'viem';
 import { baseSepolia, sepolia } from 'viem/chains';
 
-const PYUSD_SEPOLIA_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
-const USDC_SEPOLIA_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
-const LINK_SEPOLIA_ADDRESS = '0xCD85B9a767eF2277E264A4B9A14a2deACAB82FfB';
+export const PYUSD_SEPOLIA_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
+export const USDC_SEPOLIA_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+export const LINK_SEPOLIA_ADDRESS = '0xCD85B9a767eF2277E264A4B9A14a2deACAB82FfB';
 
 // Base Sepolia token addresses
 // USDC source: Circle developers documentation (Base Sepolia)
