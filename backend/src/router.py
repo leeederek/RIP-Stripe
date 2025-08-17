@@ -7,6 +7,9 @@ from src import models
 from x402.types import x402PaymentRequiredResponse, PaymentPayload
 from x402.facilitator import FacilitatorClient, FacilitatorConfig
 from cdp.auth.utils.jwt import generate_jwt, JwtOptions
+import requests
+from x402.types import PaymentRequirements
+from x402.encoding import safe_base64_decode
 
 router = fastapi.APIRouter()
 
@@ -36,20 +39,42 @@ async def get_resource(resource_id: int, request: Request):
 
 @router.post("/verify/")
 async def verify(request: Request):
-    request_payload = await request.json()
-    decoded_payment = PaymentPayload(**request_payload["paymentPayload"])
+    payment_header = request.headers.get("X-PAYMENT", "")
+    payment_obj = safe_base64_decode(payment_header)
+    # request_payload = safe_base64_decode(str(request))
+    # print(request_payload)
+    decoded_payment = PaymentPayload(**payment_obj)
+
+    access_token = make_access_token("GET")
+
+    jwt_token = access_token
+    headers = {
+        "Authorization": f"Bearer {jwt_token}",
+        "Content-Type": "application/json",
+    }
 
     # Facilitator to check payment confirmation
+    payment_requirements = PaymentRequirements(
+        scheme="exact",
+        network="base-sepolia",
+        max_amount_required="1000000000000000000",
+        resource="https://api.cdp.coinbase.com/platform/v2/x402/settle",
+        description="Premium API access for data analysis",
+        mime_type="application/json",
+        output_schema={"data": "string"},
+        pay_to="0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+        max_timeout_seconds=300,
+        asset="0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    )
     facilitator_config: FacilitatorConfig = {"url": merchant_configs.FACILITATOR_URL}
     facilitator = FacilitatorClient(facilitator_config)
-    verify_response = await facilitator.verify(
-        decoded_payment, merchant_configs.PAYMENT_REQUIREMENT
-    )
+    verify_response = await facilitator.verify(decoded_payment, payment_requirements)
+    print(verify_response)
     if not verify_response.is_valid:
         return JSONResponse(
             status_code=402,
             content=verify_response.model_dump(),
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
     # Successful payment returns web content.
     return premium_data.DATA
@@ -78,17 +103,89 @@ async def swap(data: models.BasicModel):
     returned_data = merchant.swap_currencies()
 
 
-@router.get("/access-token")
-def get_access_token():
+def make_access_token(request):
     # Generate the JWT using the CDP SDK
     jwt_token = generate_jwt(
         JwtOptions(
             api_key_id=secret_data.KEYID,
             api_key_secret=secret_data.SECRET,
-            request_method="POST",
+            request_method=request,
             request_host="api.cdp.coinbase.com",
             request_path="/platform/v2/x402/settle",
             expires_in=900,  # optional (defaults to 120 seconds)
         )
     )
-    return {"access_token": jwt_token}
+    return jwt_token
+
+
+@router.get("/access-token")
+def get_access_token():
+    return make_access_token()
+
+
+@router.post("/settle")
+async def settle_txn(request: Request):
+    # request_payload = await request.json()
+    # decoded_payment = PaymentPayload(**request_payload["paymentPayload"])
+    url = "https://api.cdp.coinbase.com/platform/v2/x402/settle"
+
+    # Create PaymentRequirements object from configs
+    payment_requirements = PaymentRequirements(
+        scheme="exact",
+        network="base-sepolia",
+        max_amount_required="1000000000000000000",
+        resource="https://api.cdp.coinbase.com/platform/v2/x402/settle",
+        description="Premium API access for data analysis",
+        mime_type="application/json",
+        output_schema={"data": "string"},
+        pay_to="0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+        max_timeout_seconds=300,
+        asset="0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    )
+
+    payload = {
+        "x402Version": 1,
+        "paymentPayload": {
+            "x402Version": 1,
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "payload": {
+                "signature": "0xf3746613c2d920b5fdabc0856f2aeb2d4f88ee6037b8cc5d04a71a4462f13480",
+                "authorization": {
+                    "from": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+                    "to": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+                    "value": "1000000000000000000",
+                    "validAfter": "1716150000",
+                    "validBefore": "1716150000",
+                    "nonce": "0x1234567890abcdef1234567890abcdef12345678",
+                },
+            },
+        },
+        "paymentRequirements": {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "maxAmountRequired": "1000000000000000000",
+            "resource": "https://api.cdp.coinbase.com/platform/v2/x402/settle",
+            "description": "Premium API access for data analysis",
+            "mimeType": "application/json",
+            "outputSchema": {"data": "string"},
+            "payTo": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+            "maxTimeoutSeconds": 300,
+            "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+            # "extra": {"gasLimit": "1000000"},p
+        },
+    }
+    access_token = make_access_token("POST")
+
+    jwt_token = access_token
+    headers = {
+        "Authorization": f"Bearer {jwt_token}",
+        "Content-Type": "application/json",
+    }
+    response = requests.post(
+        url=url,
+        json=payload,
+        headers=headers,
+    )
+    print(response.text)
+    return payload
