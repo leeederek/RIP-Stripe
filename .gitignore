@@ -15,3 +15,7 @@ venv/
 PRIVATE.md
 
 *.json
+requirements.txt
+
+node_modules/node_modules/
+CCTP/node_modules/
