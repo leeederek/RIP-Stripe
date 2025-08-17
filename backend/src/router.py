@@ -54,7 +54,7 @@ async def verify(request: Request):
     payment_requirements = PaymentRequirements(
         scheme="exact",
         network="base-sepolia",
-        max_amount_required="1",
+        max_amount_required="10",
         resource="https://api.cdp.coinbase.com/platform/v2/x402/settle",
         description="Premium API access for data analysis",
         mime_type="application/json",
@@ -62,6 +62,11 @@ async def verify(request: Request):
         pay_to="0x74051bf72a90014a515c511fECFe9811dE138235",
         max_timeout_seconds=300,
         asset="0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        extra={
+            "name": "USDC",
+            "version": "2",
+            "gasLimit": "1000000",
+        }
     )
     facilitator_config: FacilitatorConfig = {"url": merchant_configs.FACILITATOR_URL}
     facilitator = FacilitatorClient(facilitator_config)
@@ -70,7 +75,7 @@ async def verify(request: Request):
     if not verify_response.is_valid:
         return JSONResponse(
             status_code=402,
-            content=verify_response.model_dump(),
+            content=verify_response.model_dump(by_alias=True),
             headers=headers,
         )
 
@@ -83,15 +88,16 @@ async def verify(request: Request):
         "Content-Type": "application/json",
     }
     payload = {
-        "paymentPayload": decoded_payment.model_dump(),
-        "paymentRequirements": payment_requirements.model_dump(),
+        "x402Version": 1,
+        "paymentPayload": decoded_payment.model_dump(by_alias=True),
+        "paymentRequirements": payment_requirements.model_dump(by_alias=True),
     }
     response = requests.post(
         url=settle_url,
         json=payload,
         headers=headers,
     )
-    print(response)
+    print("settle res:", response.text)
 
     # Successful payment returns web content.
     return premium_data.DATA

@@ -6,13 +6,15 @@ import { createPublicClient, decodeErrorResult, encodeFunctionData, erc20Abi, ht
 import { sepolia } from 'viem/chains';
 
 
-const CUSTOM_USDC_ADDRESS = "0xa1DBc4F41540a2aA338e9aD2F5058deF509E1b95"
-const CUSTOM_USDT_ADDRESS = "0xC01def8bD0C4C9790199ABa304C944Be9491FCc3"
-const CUSTOM_PYUSD_ADDRESS = "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9"
+export const CUSTOM_USDC_ADDRESS = "0x50766571B3769d9CfC170f3b17668F3673F80EbA"
+export const CUSTOM_USDT_ADDRESS = "0x3b7e3a661cec642fa7bCE0130e327b11FF0af43e"
+export const CUSTOM_PYUSD_ADDRESS = "0x20180e82dB7Ac476A9F3b0aF245338288c88D0Ef"
+export const CUSTOM_USDE_ADDRESS = "0x3f06895671C3a55cB84e1Cc221a9917755a985D6"
 
 
 const SWAP_CONTRACT = '0xBAB68589Ca860B06F839D7Ab41F7d81A7ae5f470';
 const ETH_SEPOLIA_CHAIN_ID = 11155111;
+const BASE_SEPOLIA_CHAIN_ID = 84532;
 const sepoliaClient = createPublicClient({ chain: sepolia, transport: http() });
 
 
@@ -115,7 +117,7 @@ function useSettleFetch() {
             message: {
                 from: evmAddress,
                 to: payTo,                 // must equal paymentRequirements.payTo
-                value: '1',          // base units (e.g., 1 USDC = "1000000")
+                value: '10',          // base units (e.g., 1 USDC = "1000000")
                 validAfter: String(now),
                 validBefore: String(now + 600),
                 nonce: nonceHex,           // 32-byte hex
@@ -142,7 +144,7 @@ function useSettleFetch() {
                 authorization: {
                     from: evmAddress,
                     to: payTo,
-                    value: '1',
+                    value: '10',
                     validAfter: String(now),
                     validBefore: String(now + 600),
                     nonce: nonceHex,
@@ -215,8 +217,8 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
             });
             const approveTx = await sendEvmTransaction({
                 evmAccount: evmAddress,
-                network: 'ethereum-sepolia',
-                transaction: { to: CUSTOM_PYUSD_ADDRESS, data: approveData, gas: 120000n, chainId: ETH_SEPOLIA_CHAIN_ID, type: 'eip1559' },
+                network: 'base-sepolia',
+                transaction: { to: CUSTOM_USDT_ADDRESS, data: approveData, gas: 120000n, chainId: BASE_SEPOLIA_CHAIN_ID, type: 'eip1559' },
             });
             console.log('approve tx hash:', approveTx.transactionHash);
 
@@ -236,24 +238,24 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
             const data = encodeFunctionData({
                 abi,
                 functionName: 'swap',
-                args: [2, 0, 1000n, 800n],
+                args: [1, 0, 1000n, 800n],
             });
 
-            // Provide minimal gas hints to help estimators on empty value txs
-            const fees = await sepoliaClient.estimateFeesPerGas().catch(() => ({ maxFeePerGas: undefined, maxPriorityFeePerGas: undefined }));
+            // // Provide minimal gas hints to help estimators on empty value txs
+            // const fees = await sepoliaClient.estimateFeesPerGas().catch(() => ({ maxFeePerGas: undefined, maxPriorityFeePerGas: undefined }));
             const result = await sendEvmTransaction({
                 evmAccount: evmAddress,
                 transaction: {
                     to: SWAP_CONTRACT,
                     data,
-                    chainId: ETH_SEPOLIA_CHAIN_ID,
+                    chainId: BASE_SEPOLIA_CHAIN_ID,
                     type: "eip1559",
                     // let backend pick nonce; provide only gas limit hint
                     gas: 1200000n,
                     // maxFeePerGas: fees.maxFeePerGas,
                     // maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
                 },
-                network: "ethereum-sepolia",
+                network: "base-sepolia",
             });
             console.log("Broadcasted Tx Hash:", result.transactionHash);
         } catch (error) {
@@ -313,18 +315,18 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
                 </div>
             ),
         },
-        {
-            key: 'verify',
-            title: 'Verifying',
-            description: 'Verifying the transaction with the merchant',
-            run: stepSimulateTransaction,
-            render: (data) => (
-                <div className="stack" style={{ gap: 4 }}>
-                    <div className="helper">Ref: {data?.merchantRef}</div>
-                    <div className="helper">Status: {data?.status}</div>
-                </div>
-            ),
-        },
+        // {
+        //     key: 'verify',
+        //     title: 'Verifying',
+        //     description: 'Verifying the transaction with the merchant',
+        //     run: stepSimulateTransaction,
+        //     render: (data) => (
+        //         <div className="stack" style={{ gap: 4 }}>
+        //             <div className="helper">Ref: {data?.merchantRef}</div>
+        //             <div className="helper">Status: {data?.status}</div>
+        //         </div>
+        //     ),
+        // },
     ]), [stepSimulateTransaction]);
 
     const { statuses: stepStatuses, isRunning, run, results: stepResults } = useVerificationFlow(steps);
@@ -369,7 +371,7 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
     //                 to: SWAP_CONTRACT,
     //                 data,
     //                 value: 0n,
-    //                 chainId: ETH_SEPOLIA_CHAIN_ID,
+    //                 chainId: BASE_SEPOLIA_CHAIN_ID,
     //                 type: "eip1559"
     //             }
     //         });
@@ -396,7 +398,7 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
     //     const approveTx = await sendEvmTransaction({
     //         evmAccount: evmAddress,
     //         network: 'ethereum-sepolia',
-    //         transaction: { to: USDC, data: approveData, gas: 120000n, chainId: ETH_SEPOLIA_CHAIN_ID, type: 'eip1559' },
+    //         transaction: { to: USDC, data: approveData, gas: 120000n, chainId: BASE_SEPOLIA_CHAIN_ID, type: 'eip1559' },
     //     });
     //     console.log('approve tx hash:', approveTx.transactionHash);
 
@@ -436,7 +438,7 @@ export default function Verify({ tokenKey, getArticle, setDoesHaveAccess }) {
     //             transaction: {
     //                 to: SWAP_CONTRACT,
     //                 data,
-    //                 chainId: ETH_SEPOLIA_CHAIN_ID,
+    //                 chainId: BASE_SEPOLIA_CHAIN_ID,
     //                 gas: gasWithBuffer,
     //                 value: 0n,
     //                 type: 'eip1559',

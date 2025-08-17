@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useIsSignedIn } from '@coinbase/cdp-hooks';
 import { createPublicClient, http, formatEther, formatUnits } from 'viem';
 import { baseSepolia, sepolia } from 'viem/chains';
+import { CUSTOM_USDC_ADDRESS, CUSTOM_USDT_ADDRESS } from './Verify';
 
-export const PYUSD_SEPOLIA_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
-export const USDC_SEPOLIA_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
-export const LINK_SEPOLIA_ADDRESS = '0xCD85B9a767eF2277E264A4B9A14a2deACAB82FfB';
+const PYUSD_SEPOLIA_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
+const USDC_SEPOLIA_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+const LINK_SEPOLIA_ADDRESS = '0xCD85B9a767eF2277E264A4B9A14a2deACAB82FfB';
 
 // Base Sepolia token addresses
 // USDC source: Circle developers documentation (Base Sepolia)
@@ -22,7 +23,8 @@ const TOKENS = [
 ];
 
 const BASE_SEPOLIA_TOKENS = [
-    { key: 'usdc-base', address: USDC_BASE_SEPOLIA_ADDRESS, network: "Base Sepolia" },
+    { key: 'usdc-base', address: CUSTOM_USDC_ADDRESS, network: "Base Sepolia" },
+    { key: 'usdt-base', address: CUSTOM_USDT_ADDRESS, network: "Base Sepolia" },
 ];
 
 const erc20MinimalAbi = [
@@ -103,7 +105,7 @@ export default function WalletStatus({ onSignOut, evmAddress, onContinue, setDoe
 
         try {
             const [wei, tokenBalances] = await Promise.all([
-                sepoliaClient.getBalance({ address }),
+                baseSepoliaClient.getBalance({ address }),
                 Promise.all(
                     [...TOKENS, ...BASE_SEPOLIA_TOKENS].map(async (t) => {
                         const client = getClientForToken(t);
