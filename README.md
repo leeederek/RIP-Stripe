@@ -8,7 +8,6 @@ Under the hood, all swaps are handled instantly on-chain using a new type of AMM
 ## User Flow:
 <img width="1511" height="995" alt="Screenshot 2025-08-17 at 12 12 19 AM" src="https://github.com/user-attachments/assets/4f99f426-0fa4-40ea-9796-0043d3fa9115" />
 
-
 * :white_check_mark: Merchants choose the stablecoin they wish to receive & get access to GENIUS Act Compliant, borderless, and instant payments infrastructure for 10x cheaper without needing to know/use the blockchain directly.
 * :white_check_mark: Customers pay using any stablecoin they want and from any chain they are on with near zero slippage and with deep on-chain liquidity.
 * :white_check_mark: Stablecoin issuers get direct, on-chain distribution for their assets in the Ethereum ecosystem without fragmenting liquidity.
