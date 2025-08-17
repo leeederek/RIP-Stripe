@@ -167,18 +167,18 @@ export default function Verify({ tokenKey, getArticle }) {
     }, [getArticle]);
 
     const stepSettle = useCallback(async () => {
-        const res = await settle({
-            value: 1,
-            network: 'base-sepolia', // 'base' or 'base-sepolia'
-            chainId: 84532, // 8453 (Base), 84532 (Base Sepolia)
-            resource: 'http://localhost:8000/get-resource/123',
-            description: 'Purcahse of article',
-            mimeType: 'application/json',
-            payTo: MERCHANT_ADDRESS,
-            asset: PYUSD_BASE_SEPOLIA_ADDRESS,
-        });
-        console.log("res", res);
-        return res;
+        // const res = await settle({
+        //     value: 1,
+        //     network: 'base-sepolia', // 'base' or 'base-sepolia'
+        //     chainId: 84532, // 8453 (Base), 84532 (Base Sepolia)
+        //     resource: 'http://localhost:8000/get-resource/123',
+        //     description: 'Purcahse of article',
+        //     mimeType: 'application/json',
+        //     payTo: MERCHANT_ADDRESS,
+        //     asset: PYUSD_BASE_SEPOLIA_ADDRESS,
+        // });
+        // console.log("res", res);
+        return;
     }, [settle]);
 
     // Declarative step config: swap out `run` with real endpoints later
