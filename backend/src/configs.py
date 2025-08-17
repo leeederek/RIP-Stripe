@@ -1044,7 +1044,116 @@ class genius_configs:
 
 
 class premium_data:
-    DATA = {"title": "THIS IS PREMIUM DATA"}
+    DATA = {
+        "page": {
+            "id": "premium-landing",
+            "title": "Premium Membership",
+            "description": "Unlock exclusive features, advanced analytics, and priority support with our premium plan.",
+            "layout": "two-column",
+            "theme": {
+                "primaryColor": "#1E40AF",
+                "secondaryColor": "#FACC15",
+                "background": "#F9FAFB",
+                "font": "Inter",
+            },
+            "sections": [
+                {
+                    "type": "hero",
+                    "headline": "Upgrade to Premium",
+                    "subheadline": "Experience the best we have to offer.",
+                    "cta": {"text": "Get Premium", "link": "/subscribe"},
+                    "image": "/assets/premium-hero.png",
+                },
+                {
+                    "type": "features",
+                    "headline": "Premium Benefits",
+                    "items": [
+                        {
+                            "icon": "chart-bar",
+                            "title": "Advanced Analytics",
+                            "description": "Gain deeper insights into your activity with premium analytics.",
+                        },
+                        {
+                            "icon": "lock",
+                            "title": "Exclusive Content",
+                            "description": "Access premium-only articles, guides, and resources.",
+                        },
+                        {
+                            "icon": "support",
+                            "title": "Priority Support",
+                            "description": "Skip the line with 24/7 priority customer support.",
+                        },
+                    ],
+                },
+                {
+                    "type": "pricing",
+                    "headline": "Choose Your Plan",
+                    "plans": [
+                        {
+                            "id": "monthly",
+                            "title": "Monthly",
+                            "price": "$12",
+                            "billingCycle": "per month",
+                            "features": ["All premium features", "Cancel anytime"],
+                            "cta": {
+                                "text": "Subscribe Monthly",
+                                "link": "/subscribe?plan=monthly",
+                            },
+                        },
+                        {
+                            "id": "yearly",
+                            "title": "Yearly",
+                            "price": "$99",
+                            "billingCycle": "per year",
+                            "features": ["All premium features", "2 months free"],
+                            "cta": {
+                                "text": "Subscribe Yearly",
+                                "link": "/subscribe?plan=yearly",
+                            },
+                        },
+                    ],
+                },
+                {
+                    "type": "testimonials",
+                    "headline": "What Our Members Say",
+                    "items": [
+                        {
+                            "name": "Jane Doe",
+                            "quote": "Premium has completely transformed how I use this platform.",
+                            "avatar": "/avatars/jane.png",
+                        },
+                        {
+                            "name": "John Smith",
+                            "quote": "The advanced analytics are worth every penny.",
+                            "avatar": "/avatars/john.png",
+                        },
+                    ],
+                },
+                {
+                    "type": "faq",
+                    "headline": "Frequently Asked Questions",
+                    "items": [
+                        {
+                            "question": "Can I cancel anytime?",
+                            "answer": "Yes, you can cancel your premium plan at any time.",
+                        },
+                        {
+                            "question": "Do you offer student discounts?",
+                            "answer": "Yes, we provide a 20% discount for students. Contact support for details.",
+                        },
+                    ],
+                },
+            ],
+            "footer": {
+                "links": [
+                    {"text": "Privacy Policy", "url": "/privacy"},
+                    {"text": "Terms of Service", "url": "/terms"},
+                    {"text": "Support", "url": "/support"},
+                ],
+                "copyright": "© 2025 YourCompany. All rights reserved.",
+            },
+        }
+    }
 
 
 class secret_data:
