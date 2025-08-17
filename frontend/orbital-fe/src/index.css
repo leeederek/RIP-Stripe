@@ -192,10 +192,7 @@ code {
     box-shadow 0.2s ease, transform 0.05s ease;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-600));
-  border: none;
-}
+
 
 .btn-ghost {
   background: transparent;
@@ -205,6 +202,17 @@ code {
 .btn:hover {
   background: var(--panel-strong);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-primary {
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+    box-shadow 0.2s ease, transform 0.05s ease;
+  background: linear-gradient(135deg, var(--primary), var(--primary-600));
+  border: none;
 }
 
 .btn-primary:hover {
@@ -327,6 +335,42 @@ code {
   color: var(--muted);
 }
 
+
+/* Simple spinner */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Step index badge (distinct from .tag) */
+.step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* White variant for button spinner */
+.spinner-white {
+  border-color: rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+}
 
 /* OTP input group */
 .otp-inputs {
