@@ -3,6 +3,8 @@ Kyma Pay is on-chain financial infrastructure for merchants to accept [GENIUS Ac
 
 Under the hood, all swaps are handled instantly on-chain using a new type of AMM design based on [Orbital](https://www.paradigm.xyz/2025/06/orbital) that offers high capital efficiency (via concentrated liquidity) and low slippage. Kyma Pay uses the previously abandoned `HTTP 402: Payment Required` response type for programmatic payments and LayerZero's OFT adapaters to facilitate omnichain stablecoin swaps to/from a single liquidity pool. 
 
+[Kyma was a Finalist at ETHGlobal NYC 2025 Hackathon](https://ethglobal.com/showcase/kyma-pay-yn65a)
+
 *Kyma (κῦμα), the Greek word for "wave", symbolizes the powerful wave of transformation that stablecoins are bringing to global finance.”*
 
 ## User Flow:
